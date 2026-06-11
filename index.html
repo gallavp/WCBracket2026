@@ -253,21 +253,15 @@
   </div>
 </div>
 
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ═══════════════════════════════════════════════
-//  CONFIG  ← paste your Firebase values here
+//  CONFIG  ← paste your Supabase values here
+//  Get these from: Supabase dashboard → Settings → API
 // ═══════════════════════════════════════════════
-const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId:         "YOUR_PROJECT_ID",
-  storageBucket:     "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId:             "YOUR_APP_ID"
-};
-const ADMIN_PASS = "wc2026admin"; // ← change before deploying
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // e.g. https://abcxyz.supabase.co
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';  // the public "anon" key
+const ADMIN_PASS   = 'wc2026admin';             // ← change before deploying
 
 // ═══════════════════════════════════════════════
 //  TEAM DATA
@@ -359,10 +353,9 @@ const BTOTAL=R32_ORDER.length*SH+100;
 const BWIDTH=4*(CW+CG)+CW;
 
 // ═══════════════════════════════════════════════
-//  FIREBASE
+//  SUPABASE
 // ═══════════════════════════════════════════════
-firebase.initializeApp(FIREBASE_CONFIG);
-const db=firebase.firestore();
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ═══════════════════════════════════════════════
 //  APP STATE
@@ -414,14 +407,15 @@ async function initBracket(){
   document.getElementById('bracket-content').innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
   if(S.pid){
     try{
-      const doc=await db.collection('brackets').doc(S.pid).get();
-      if(doc.exists){
-        Object.assign(S.b,doc.data());
+      const {data:row,error:lerr}=await db.from('brackets').select('data').eq('pid',S.pid).maybeSingle();
+      if(lerr) throw lerr;
+      if(row){
+        Object.assign(S.b,row.data||{});
         S.b.wins=S.b.wins||{};
-        S.b.thirdTeams=S.b.thirdTeams||{}; // backward compat
+        S.b.thirdTeams=S.b.thirdTeams||{};
         S.step=STEPS.length-1;
       }else{
-        // Doc gone — start fresh
+        // Not found — start fresh
         S.pid=null; localStorage.removeItem('wcPid'); S.b=freshB(); S.step=0;
       }
     }catch(e){
@@ -929,24 +923,21 @@ function validateGroups(from,to){
 // ═══════════════════════════════════════════════
 async function submitBracket(){
   // Config guard
-  if(FIREBASE_CONFIG.apiKey==='YOUR_API_KEY'||FIREBASE_CONFIG.projectId==='YOUR_PROJECT_ID'){
+  if(SUPABASE_URL==='YOUR_SUPABASE_URL'||SUPABASE_KEY==='YOUR_SUPABASE_ANON_KEY'){
     const e=document.getElementById('submit-err');
-    if(e){e.style.display='block';e.className='alert alert-err';e.textContent='❌ Firebase is not configured. Update FIREBASE_CONFIG in the code — see SETUP.md.';}
+    if(e){e.style.display='block';e.className='alert alert-err';e.textContent='❌ Supabase is not configured. Update SUPABASE_URL and SUPABASE_KEY in the code — see SETUP.md.';}
     return;
   }
   const btn=document.getElementById('btn-submit');
   if(btn){btn.disabled=true;btn.textContent='Submitting…';}
   try{
     computeArrays();
-    const data={...S.b,updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
-    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timed out. Check your internet connection and Firebase config.')),15000));
-    if(!S.pid){
-      data.submittedAt=firebase.firestore.FieldValue.serverTimestamp();
-      const ref=await Promise.race([db.collection('brackets').add(data),timeout]);
-      S.pid=ref.id; localStorage.setItem('wcPid',S.pid);
-    }else{
-      await Promise.race([db.collection('brackets').doc(S.pid).set(data,{merge:true}),timeout]);
-    }
+    if(!S.pid){S.pid=genPid();localStorage.setItem('wcPid',S.pid);}
+    const timeout=new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timed out. Check your internet connection and Supabase config.')),15000));
+    const saveOp=db.from('brackets')
+      .upsert({pid:S.pid,data:{...S.b},updated_at:new Date().toISOString()})
+      .then(({error})=>{if(error) throw error;});
+    await Promise.race([saveOp,timeout]);
     document.getElementById('bracket-content').innerHTML=`
       <div style="text-align:center;padding:3rem 1rem">
         <div style="font-size:3rem;margin-bottom:.75rem">🎉</div>
@@ -1012,7 +1003,7 @@ async function loadLeaderboard(){
   const el=document.getElementById('lb-content');
   el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
 
-  // Fetch results: try live API first, fall back to admin-entered Firestore data
+  // Fetch results: try live API first, fall back to admin-entered Supabase data
   let res=null;
   let resSource='none';
   try{
@@ -1021,29 +1012,40 @@ async function loadLeaderboard(){
   }catch(e){}
   if(!res){
     try{
-      const doc=await db.collection('config').doc('results').get();
-      if(doc.exists){res=doc.data();resSource='admin';}
+      const {data:resRow}=await db.from('results').select('data').eq('id',1).maybeSingle();
+      if(resRow?.data){res=resRow.data;resSource='admin';}
     }catch(e){}
   }
 
-  // Real-time bracket updates via onSnapshot
+  // Initial fetch + real-time updates
   _lbEntries={};
-  _lbUnsub=db.collection('brackets').onSnapshot(snap=>{
-    renderLeaderboardTable(snap,res,resSource,el);
-  },err=>{
+  try{
+    const {data:rows=[],error}=await db.from('brackets').select('pid,data');
+    if(error) throw error;
+    renderLeaderboardTable(rows,res,resSource,el);
+  }catch(err){
     el.innerHTML=`<div class="alert alert-err">❌ ${esc(err.message)}</div>`;
-  });
+    return;
+  }
+
+  const channel=db.channel('brackets-rt')
+    .on('postgres_changes',{event:'*',schema:'public',table:'brackets'},async ()=>{
+      const {data:rows=[]}=await db.from('brackets').select('pid,data');
+      renderLeaderboardTable(rows,res,resSource,el);
+    })
+    .subscribe();
+  _lbUnsub=()=>db.removeChannel(channel);
 }
 
-function renderLeaderboardTable(snap,res,resSource,el){
+function renderLeaderboardTable(brackets,res,resSource,el){
   _lbEntries={};
   const rows=[];
-  snap.forEach(doc=>{
-    const d=doc.data();
-    _lbEntries[doc.id]=d;
+  (brackets||[]).forEach(row=>{
+    const d=row.data||{};
+    _lbEntries[row.pid]=d;
     const sc=scoreIt(d,res);
     const ko=(sc.r32||0)+(sc.r16||0)+(sc.qf||0)+(sc.sf||0)+(sc.tm||0)+(sc.ch||0);
-    rows.push({id:doc.id,name:d.name||'?',sc,ko});
+    rows.push({id:row.pid,name:d.name||'?',sc,ko});
   });
   rows.sort((a,b)=>b.sc.total-a.sc.total);
 
@@ -1190,7 +1192,7 @@ async function renderAdminPanel(){
   const el=document.getElementById('admin-content');
   el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
   let res={groups:{},thirdPlace:[],r32:[],r16:[],qf:[],sf:[],thirdPlaceWinner:'',champion:'',topScorer:''};
-  try{const doc=await db.collection('config').doc('results').get();if(doc.exists) res={...res,...doc.data()};}catch(e){}
+  try{const {data:resRow}=await db.from('results').select('data').eq('id',1).maybeSingle();if(resRow?.data) res={...res,...resRow.data};}catch(e){}
   S._pendRes=JSON.parse(JSON.stringify(res));
 
   let html=`<h2 style="margin-bottom:1rem">⚙️ Admin Panel</h2>
@@ -1254,7 +1256,8 @@ async function saveResults(){
   const tw=document.getElementById('res-third-winner');
   if(tw) S._pendRes.thirdPlaceWinner=tw.value;
   try{
-    await db.collection('config').doc('results').set(S._pendRes);
+    const {error:serr}=await db.from('results').upsert({id:1,data:S._pendRes});
+    if(serr) throw serr;
     const msg=document.getElementById('save-msg');
     if(msg){msg.style.display='block';msg.className='alert alert-ok';msg.textContent='✅ Results saved!';setTimeout(()=>msg.style.display='none',3000);}
   }catch(err){alert('Save failed: '+err.message);}
@@ -1264,6 +1267,10 @@ async function saveResults(){
 //  UTILS
 // ═══════════════════════════════════════════════
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function genPid(){
+  try{return crypto.randomUUID();}
+  catch(e){return 'xxxx-xxxx-4xxx-yxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return(c==='x'?r:r&0x3|0x8).toString(16);});}
+}
 
 // ═══════════════════════════════════════════════
 //  INIT
@@ -1271,12 +1278,8 @@ function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').
 (async()=>{
   if(S.pid){
     try{
-      const doc=await db.collection('brackets').doc(S.pid).get();
-      if(doc.exists){
-        Object.assign(S.b,doc.data());
-        S.b.wins=S.b.wins||{};
-        S.b.thirdTeams=S.b.thirdTeams||{};
-      }
+      const {data:row}=await db.from('brackets').select('data').eq('pid',S.pid).maybeSingle();
+      if(row){Object.assign(S.b,row.data||{});S.b.wins=S.b.wins||{};S.b.thirdTeams=S.b.thirdTeams||{};}
     }catch(e){}
   }
 })();

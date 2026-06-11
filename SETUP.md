@@ -1,72 +1,103 @@
 # World Cup 2026 Bracket Challenge — Setup Guide
 
-## Step 1: Create a Firebase Project (free)
+## Step 1: Create a Supabase Project (free)
 
-1. Go to https://console.firebase.google.com
-2. Click **"Add project"**, name it `wc2026-bracket` (or anything)
-3. Disable Google Analytics (optional), click **"Create project"**
+1. Go to https://supabase.com and sign up / log in
+2. Click **"New project"**, give it any name (e.g. `wc2026-bracket`)
+3. Set a database password (save it somewhere — you won't need it in the app but Supabase requires it)
+4. Choose any region, click **"Create new project"** and wait ~2 minutes
 
-## Step 2: Create a Firestore Database
+## Step 2: Create the Database Tables
 
-1. In the Firebase Console, click **"Firestore Database"** in the left menu
-2. Click **"Create database"**
-3. Choose **"Start in test mode"** (lets anyone read/write — fine for internal use)
-4. Pick any region, click **"Enable"**
+1. In the Supabase dashboard, click **"SQL Editor"** in the left sidebar
+2. Click **"New query"** and paste the following, then click **Run**:
 
-## Step 3: Get Your Firebase Config
+```sql
+-- Participant bracket submissions (one row per person)
+create table brackets (
+  pid  text primary key,
+  data jsonb not null default '{}',
+  submitted_at timestamptz default now(),
+  updated_at   timestamptz default now()
+);
 
-1. In the Firebase Console, click the ⚙️ gear → **"Project settings"**
-2. Scroll down to **"Your apps"** → click the `</>` web icon
-3. Register the app (any name), skip "Firebase Hosting"
-4. Copy the `firebaseConfig` object — it looks like:
+-- Admin-entered results (single row)
+create table results (
+  id   int primary key default 1,
+  data jsonb not null default '{}'
+);
 
-```js
-const firebaseConfig = {
-  apiKey: "AIzaSy...",
-  authDomain: "wc2026-bracket.firebaseapp.com",
-  projectId: "wc2026-bracket",
-  storageBucket: "wc2026-bracket.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef"
-};
+-- Allow public read/write (no login required — internal tool)
+alter table brackets enable row level security;
+alter table results  enable row level security;
+create policy "public_brackets" on brackets for all to anon using (true) with check (true);
+create policy "public_results"  on results  for all to anon using (true) with check (true);
+
+-- Enable real-time updates for the leaderboard
+alter publication supabase_realtime add table brackets;
 ```
+
+## Step 3: Get Your API Keys
+
+1. In the Supabase dashboard, click ⚙️ **Settings** → **API**
+2. Copy two values:
+   - **Project URL** — looks like `https://abcxyzabc.supabase.co`
+   - **anon / public** key — a long JWT string starting with `eyJ...`
 
 ## Step 4: Paste Config into index.html
 
 Open `index.html` and find this block near the top of the `<script>`:
 
 ```js
-const FIREBASE_CONFIG = {
-  apiKey:            "YOUR_API_KEY",
-  authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
-  ...
-};
-const ADMIN_PASS = "wc2026admin";  // ← change this too!
+const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+const SUPABASE_KEY = 'YOUR_SUPABASE_ANON_KEY';
+const ADMIN_PASS   = 'wc2026admin';
 ```
 
-Replace each `"YOUR_..."` value with the real values from Step 3.
-**Also change `ADMIN_PASS` to something private** — this is the password
-for the admin results entry screen.
+Replace the placeholder strings with your real values.  
+**Also change `ADMIN_PASS`** to something private — this protects the result-entry screen.
 
-## Step 5: Share with the Company
+## Step 5: Deploy to Vercel (auto-deploy from GitHub)
 
-Host the single `index.html` file anywhere:
+The repo is already connected to Vercel at `gallavp/WCBracket2026`.  
+Just push your changes to `main` and Vercel deploys automatically.
 
-- **Easiest**: Upload to Google Drive → Share link (choose "Anyone with link can view")
-  - Then open it locally or with a viewer
-- **Better**: Use GitHub Pages, Netlify Drop, or any static host
-  - Drag `index.html` into https://app.netlify.com/drop → get a URL instantly (free)
+```bash
+git add index.html
+git commit -m "Add Supabase config"
+git push
+```
 
-All 20 participants visit the same URL, submit their brackets, and see
-the shared leaderboard in real time.
+## Step 6 (Optional): Live Auto-Scoring via football-data.org
 
-## How it Works
+To have leaderboard scores update automatically as matches finish:
+
+1. Register for a free API key at https://www.football-data.org
+2. In the Vercel dashboard → your project → **Settings** → **Environment Variables**  
+   Add: `FOOTBALL_API_KEY` = your key
+3. Redeploy (trigger via Vercel dashboard or push any change)
+
+Without this, an admin can still enter results manually (see below).
+
+---
+
+## How It Works
 
 | Who | What they do |
 |-----|--------------|
-| Participants | Open the page, enter their name, fill out the 9-step bracket wizard, submit |
-| Admin (you) | Click "Admin" in the nav, enter the password, enter real match results as the tournament progresses |
-| Everyone | Check the Leaderboard at any time — it updates automatically as you save results |
+| Participants | Open the page, fill out the bracket wizard, submit |
+| Admin (you) | Click **Admin** in the nav, enter the password, enter real match results as the tournament progresses |
+| Everyone | Check the **Leaderboard** at any time — updates live as brackets are submitted or results change |
+
+## Updating Results (Admin)
+
+As each phase ends:
+1. Open the app → click **Admin** → enter password
+2. Enter the group results (1st and 2nd per group)
+3. Select which 8 groups had their 3rd-place team qualify
+4. For each knockout round, select the teams that advanced
+5. At the end, set Champion, 3rd-place winner, and Top Scorer
+6. Click **Save All Results** — leaderboard updates immediately for everyone
 
 ## Point System
 
@@ -84,13 +115,3 @@ the shared leaderboard in real time.
 | Top scorer (Golden Boot) | 10 |
 
 **Maximum possible: 186 points**
-
-## Updating Results (Admin)
-
-As each phase ends:
-1. Open the app → click **Admin** → enter password
-2. Enter the group results (1st and 2nd per group)
-3. Select which 8 groups had their 3rd-place team qualify
-4. For each knockout round, select the teams that advanced
-5. At the end, set Champion, 3rd-place winner, and Top Scorer
-6. Click **Save All Results** — leaderboard updates immediately for everyone
