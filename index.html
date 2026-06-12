@@ -157,11 +157,38 @@
     .modal-hd{display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;background:rgba(13,17,23,.97);padding:.75rem 0;z-index:1;border-bottom:1px solid var(--border);margin-bottom:1.25rem;}
     .modal-hd h2{font-size:1.1rem;color:var(--gold);}
 
+    /* MATCH PROBABILITY */
+    .bm-prob{font-size:.64rem;color:var(--muted);flex-shrink:0;white-space:nowrap;letter-spacing:-.01em;}
+    .bm-t.win .bm-prob{color:rgba(245,197,24,.55);}
+
+    /* CHAMPION ODDS CARD */
+    .odds-card{background:rgba(245,197,24,.05);border:1px solid rgba(245,197,24,.2);border-radius:var(--radius);padding:1rem;margin-top:1rem;display:flex;align-items:center;gap:1rem;}
+    .odds-pct{font-size:1.75rem;font-weight:800;flex-shrink:0;min-width:48px;text-align:center;}
+
+    /* GROUP STANDINGS VIEW */
+    .grp-std-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:.85rem;}
+    .grp-std-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;}
+    .grp-std-hd{padding:.6rem .9rem;border-bottom:1px solid var(--border);font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);font-weight:700;}
+    .grp-std-tbl{width:100%;border-collapse:collapse;font-size:.78rem;}
+    .grp-std-tbl th{padding:.32rem .6rem;text-align:center;color:var(--muted);font-weight:500;border-bottom:1px solid var(--border);}
+    .grp-std-tbl th:nth-child(2){text-align:left;}
+    .grp-std-tbl td{padding:.42rem .6rem;text-align:center;border-bottom:1px solid rgba(48,54,61,.4);}
+    .grp-std-tbl td:nth-child(2){text-align:left;font-weight:500;}
+    .grp-std-tbl tr:last-child td{border-bottom:none;}
+    .adv-cell{display:flex;align-items:center;justify-content:flex-end;gap:.35rem;padding-right:.5rem;}
+    .adv-bar-bg{width:44px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;flex-shrink:0;}
+    .adv-bar-fill{height:100%;border-radius:2px;}
+
+    /* API STATUS */
+    .api-status{display:flex;align-items:center;gap:.5rem;padding:.6rem .9rem;border-radius:var(--radius);font-size:.82rem;margin-bottom:1.1rem;}
+    .api-status.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);}
+    .api-status.warn{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);color:#f0cd5e;}
+
     /* MOBILE */
     @media(max-width:560px){
       .hero h1{font-size:1.7rem;}
       .pts-grid{grid-template-columns:1fr;}
-      .groups-grid,.third-group-grid{grid-template-columns:1fr;}
+      .groups-grid,.third-group-grid,.grp-std-grid{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -171,6 +198,7 @@
   <span class="nav-brand">⚽ WC2026</span>
   <button class="nav-btn active" data-view="home">Home</button>
   <button class="nav-btn" data-view="bracket">My Bracket</button>
+  <button class="nav-btn" data-view="groups">Groups</button>
   <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
   <button class="nav-btn" data-view="admin">Admin</button>
 </nav>
@@ -221,6 +249,17 @@
 <div id="view-bracket" class="view">
   <div class="container">
     <div id="bracket-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- GROUPS -->
+<div id="view-groups" class="view">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <h2 style="font-size:1.3rem">⚽ Group Stage Standings</h2>
+      <button class="btn btn-secondary" id="grp-refresh" style="font-size:.78rem;padding:.3rem .65rem">↻ Refresh</button>
+    </div>
+    <div id="grp-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </div>
 </div>
 
@@ -286,6 +325,98 @@ const SCORERS = ["Kylian Mbappé","Erling Haaland","Lionel Messi","Cristiano Ron
   "Vinicius Jr.","Harry Kane","Bukayo Saka","Phil Foden","Lautaro Martínez",
   "Pedri","Gavi","Rodri","Kai Havertz","Romelu Lukaku","Jonathan David",
   "Richarlison","Alphonso Davies","Hirving Lozano","Raúl Jiménez","Memphis Depay"];
+
+// ═══════════════════════════════════════════════
+//  FIFA WORLD RANKING POINTS (frozen at WC2026 draw — Jun 2026 estimates)
+// ═══════════════════════════════════════════════
+const FIFA_PTS = {
+  // Group A
+  "Mexico":1680,"South Korea":1612,"Czechia":1578,"South Africa":1448,
+  // Group B
+  "Canada":1580,"Switzerland":1668,"Bosnia-Herzegovina":1518,"Qatar":1420,
+  // Group C
+  "Morocco":1722,"Brazil":1837,"Scotland":1508,"Haiti":1330,
+  // Group D
+  "United States":1693,"Türkiye":1545,"Australia":1585,"Paraguay":1512,
+  // Group E
+  "Germany":1738,"Ivory Coast":1540,"Ecuador":1601,"Curaçao":1308,
+  // Group F
+  "Netherlands":1756,"Japan":1716,"Sweden":1550,"Tunisia":1530,
+  // Group G
+  "Belgium":1791,"Iran":1626,"Egypt":1590,"New Zealand":1388,
+  // Group H
+  "Spain":1840,"Saudi Arabia":1460,"Uruguay":1697,"Cape Verde":1380,
+  // Group I
+  "France":1876,"Senegal":1649,"Norway":1558,"Iraq":1450,
+  // Group J
+  "Argentina":1896,"Austria":1598,"Algeria":1571,"Jordan":1390,
+  // Group K
+  "Portugal":1818,"Colombia":1703,"DR Congo":1480,"Uzbekistan":1418,
+  // Group L
+  "England":1852,"Croatia":1737,"Panama":1562,"Ghana":1510,
+};
+
+// P(t1 beats t2) as integer 0-100, using Elo-style formula
+function matchProb(t1, t2){
+  if(!t1||!t2) return 50;
+  const p1=FIFA_PTS[t1]||1500, p2=FIFA_PTS[t2]||1500;
+  return Math.round(100/(1+Math.pow(10,(p2-p1)/600)));
+}
+
+// Estimated % chance of advancing to R32 from group
+function groupAdvPct(idx, table){
+  const entry=table[idx]; if(!entry) return 0;
+  const gamesLeft=3-entry.played;
+  if(gamesLeft<=0){
+    if(idx<=1) return 97;
+    if(idx===2) return 62; // ~8/12 3rd-place teams qualify on avg
+    return 3;
+  }
+  const pts=entry.pts;
+  const pts2nd=table[1]?.pts??0;
+  const pts3rd=table[2]?.pts??0;
+  if(idx===0){
+    const lead=pts-pts3rd;
+    if(lead>gamesLeft*3) return 97;
+    return Math.max(62,Math.min(95,72+lead*5));
+  }
+  if(idx===1){
+    const buf=pts-pts3rd;
+    if(buf>gamesLeft*3) return 95;
+    return Math.max(30,Math.min(92,55+buf*6));
+  }
+  if(idx===2){
+    const def=pts2nd-pts;
+    const canReach=pts+gamesLeft*3;
+    if(canReach<pts2nd-1) return 8;
+    return Math.max(6,Math.min(58,40-def*7));
+  }
+  // 4th place
+  const def4=(table[2]?.pts??0)-pts;
+  const canReach4=pts+gamesLeft*3;
+  if(canReach4<(table[2]?.pts??0)-1) return 2;
+  return Math.max(2,Math.min(18,14-def4*4));
+}
+
+// Returns {pct, path} for the predicted champion winning the whole tournament
+function champProb(bkt, t3map){
+  const champ=bkt.wins?.[103]; if(!champ) return null;
+  const koOrder=[...R32_ORDER,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103];
+  let prob=1;
+  const path=[];
+  for(const mid of koOrder){
+    if(bkt.wins?.[mid]===champ){
+      const t1=getTeamForBkt(mid,1,bkt,t3map), t2=getTeamForBkt(mid,2,bkt,t3map);
+      if(t1&&t2){
+        const opp=t1===champ?t2:t1;
+        const p=matchProb(champ,opp)/100;
+        prob*=p;
+        path.push({opp,pct:Math.round(p*100)});
+      }
+    }
+  }
+  return{pct:Math.round(prob*100),path};
+}
 
 // ═══════════════════════════════════════════════
 //  OFFICIAL 2026 KNOCKOUT BRACKET
@@ -368,7 +499,8 @@ const S={
 };
 
 // Leaderboard live state
-let _lbUnsub=null;
+let _lbUnsub=null, _lbRefreshTimer=null;
+let _lbEl=null, _lbLastRes=null, _lbLastSrc='none', _lbSyncedAt=0;
 let _lbEntries={};
 let _liveRes=null, _liveResTS=0;
 
@@ -379,6 +511,7 @@ document.querySelectorAll('[data-view]').forEach(el=>{
   el.addEventListener('click',()=>showView(el.dataset.view));
 });
 document.getElementById('lb-refresh').addEventListener('click',loadLeaderboard);
+document.getElementById('grp-refresh').addEventListener('click',()=>{_liveRes=null;_liveResTS=0;loadGroups();});
 document.getElementById('modal-close').addEventListener('click',hideEntryModal);
 document.getElementById('entry-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('entry-modal')) hideEntryModal();
@@ -386,8 +519,11 @@ document.getElementById('entry-modal').addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Escape') hideEntryModal();});
 
 function showView(v){
-  // Clean up leaderboard real-time listener when leaving
-  if(S.view==='leaderboard'&&v!=='leaderboard'&&_lbUnsub){_lbUnsub();_lbUnsub=null;}
+  // Clean up leaderboard real-time listener + refresh timer when leaving
+  if(S.view==='leaderboard'&&v!=='leaderboard'){
+    if(_lbUnsub){_lbUnsub();_lbUnsub=null;}
+    if(_lbRefreshTimer){clearInterval(_lbRefreshTimer);_lbRefreshTimer=null;}
+  }
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
   document.getElementById('view-'+v).classList.add('active');
@@ -396,6 +532,7 @@ function showView(v){
   if(v==='leaderboard') loadLeaderboard();
   if(v==='bracket')     initBracket();
   if(v==='admin')       initAdmin();
+  if(v==='groups')      loadGroups();
 }
 
 // ═══════════════════════════════════════════════
@@ -542,6 +679,22 @@ function stepBracket(){
   const filled=countFilled(wins),total=Object.keys(BD).length,allDone=wins[103]&&wins[104];
   html+=`<div class="counter ${allDone?'ok':'warn'}" style="margin-top:1rem">
     <span>${filled}/${total} matches filled${allDone?' — bracket complete!':' — fill all matches to continue'}</span></div>`;
+
+  // Champion path probability card
+  const cp=champProb(S.b,S._t3);
+  if(cp){
+    const col=cp.pct>=15?'var(--green)':cp.pct>=7?'var(--gold)':'var(--red)';
+    const pathStr=cp.path.map(x=>`${esc(x.opp)} (${x.pct}%)`).join(' → ');
+    html+=`<div class="odds-card">
+      <div class="odds-pct" style="color:${col}">${cp.pct}%</div>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">🏆 ${esc(wins[103])} wins the World Cup</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Estimated based on FIFA Rankings — predicted path: ${pathStr||'resolving…'}</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">Rankings frozen at tournament start · for entertainment only</div>
+      </div>
+    </div>`;
+  }
+
   html+=navBtns();
   return html;
 }
@@ -552,12 +705,14 @@ function matchCard(mid,t1,t2,w,cx,cy){
   const top=cy-MH/2;
   const r1=t1?w===t1?'win':'':'empty', r2=t2?w===t2?'win':'':'empty';
   const tb1=!t1?'tbd':'', tb2=!t2?'tbd':'';
+  let p1='',p2='';
+  if(t1&&t2){const p=matchProb(t1,t2);p1=`<span class="bm-prob">${p}%</span>`;p2=`<span class="bm-prob">${100-p}%</span>`;}
   return`<div class="bm" style="left:${cx}px;top:${top}px">
     <div class="bm-t ${r1} ${tb1}" data-action="bpick" data-mid="${mid}" data-team="${esc(t1||'')}">
-      <span class="bm-name">${esc(t1||'TBD')}</span>${w===t1?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${esc(t1||'TBD')}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
     </div>
     <div class="bm-t ${r2} ${tb2}" data-action="bpick" data-mid="${mid}" data-team="${esc(t2||'')}">
-      <span class="bm-name">${esc(t2||'TBD')}</span>${w===t2?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${esc(t2||'TBD')}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
     </div>
   </div>`;
 }
@@ -566,12 +721,14 @@ function matchCardReadOnly(mid,t1,t2,w,cx,cy){
   const top=cy-MH/2;
   const r1=t1?w===t1?'win':'':'empty', r2=t2?w===t2?'win':'':'empty';
   const tb1=!t1?'tbd':'', tb2=!t2?'tbd':'';
+  let p1='',p2='';
+  if(t1&&t2){const p=matchProb(t1,t2);p1=`<span class="bm-prob">${p}%</span>`;p2=`<span class="bm-prob">${100-p}%</span>`;}
   return`<div class="bm" style="left:${cx}px;top:${top}px;pointer-events:none">
     <div class="bm-t ${r1} ${tb1}">
-      <span class="bm-name">${esc(t1||'TBD')}</span>${w===t1?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${esc(t1||'TBD')}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
     </div>
     <div class="bm-t ${r2} ${tb2}">
-      <span class="bm-name">${esc(t2||'TBD')}</span>${w===t2?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${esc(t2||'TBD')}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
     </div>
   </div>`;
 }
@@ -1000,41 +1157,55 @@ async function fetchLiveResults(){
 // ═══════════════════════════════════════════════
 async function loadLeaderboard(){
   if(_lbUnsub){_lbUnsub();_lbUnsub=null;}
-  const el=document.getElementById('lb-content');
-  el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
+  if(_lbRefreshTimer){clearInterval(_lbRefreshTimer);_lbRefreshTimer=null;}
+  _lbEl=document.getElementById('lb-content');
+  _lbEl.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
 
   // Fetch results: try live API first, fall back to admin-entered Supabase data
-  let res=null;
-  let resSource='none';
+  _lbLastRes=null; _lbLastSrc='none';
   try{
     const live=await fetchLiveResults();
-    if(live&&Object.keys(live.groups||{}).length>0){res=live;resSource='live';}
+    if(live&&Object.keys(live.groups||{}).length>0){_lbLastRes=live;_lbLastSrc='live';}
   }catch(e){}
-  if(!res){
+  if(!_lbLastRes){
     try{
       const {data:resRow}=await db.from('results').select('data').eq('id',1).maybeSingle();
-      if(resRow?.data){res=resRow.data;resSource='admin';}
+      if(resRow?.data){_lbLastRes=resRow.data;_lbLastSrc='admin';}
     }catch(e){}
   }
 
-  // Initial fetch + real-time updates
+  _lbSyncedAt=Date.now();
   _lbEntries={};
   try{
     const {data:rows=[],error}=await db.from('brackets').select('pid,data');
     if(error) throw error;
-    renderLeaderboardTable(rows,res,resSource,el);
+    renderLeaderboardTable(rows,_lbLastRes,_lbLastSrc,_lbEl);
   }catch(err){
-    el.innerHTML=`<div class="alert alert-err">❌ ${esc(err.message)}</div>`;
+    _lbEl.innerHTML=`<div class="alert alert-err">❌ ${esc(err.message)}</div>`;
     return;
   }
 
+  // Real-time bracket updates
   const channel=db.channel('brackets-rt')
     .on('postgres_changes',{event:'*',schema:'public',table:'brackets'},async ()=>{
       const {data:rows=[]}=await db.from('brackets').select('pid,data');
-      renderLeaderboardTable(rows,res,resSource,el);
+      renderLeaderboardTable(rows,_lbLastRes,_lbLastSrc,_lbEl);
     })
     .subscribe();
   _lbUnsub=()=>db.removeChannel(channel);
+
+  // Auto-refresh scores every 10 minutes
+  _lbRefreshTimer=setInterval(async()=>{
+    if(S.view!=='leaderboard'||!_lbEl){clearInterval(_lbRefreshTimer);_lbRefreshTimer=null;return;}
+    _liveRes=null;_liveResTS=0; // force re-fetch
+    try{
+      const live=await fetchLiveResults();
+      if(live&&Object.keys(live.groups||{}).length>0){_lbLastRes=live;_lbLastSrc='live';}
+    }catch(e){}
+    _lbSyncedAt=Date.now();
+    const {data:rows=[]}=await db.from('brackets').select('pid,data');
+    renderLeaderboardTable(rows,_lbLastRes,_lbLastSrc,_lbEl);
+  },10*60*1000);
 }
 
 function renderLeaderboardTable(brackets,res,resSource,el){
@@ -1082,10 +1253,12 @@ function renderLeaderboardTable(brackets,res,resSource,el){
   html+=`</tbody></table></div>`;
 
   // Status footer
+  const syncAge=_lbSyncedAt?Math.round((Date.now()-_lbSyncedAt)/60000):null;
+  const syncStr=syncAge!==null?(syncAge<1?'just now':`${syncAge}m ago`):'';
   if(resSource==='live'){
-    html+=`<div style="margin-top:.5rem;font-size:.75rem;color:var(--green);text-align:right">🟢 Live scores · auto-updates in real time</div>`;
+    html+=`<div style="margin-top:.5rem;font-size:.75rem;color:var(--green);text-align:right">🟢 Live scores${syncStr?' · synced '+syncStr:''} · auto-refreshes every 10 min</div>`;
   }else if(resSource==='admin'){
-    html+=`<div style="margin-top:.5rem;font-size:.75rem;color:var(--muted);text-align:right">Scores from admin · auto-updates in real time</div>`;
+    html+=`<div style="margin-top:.5rem;font-size:.75rem;color:var(--muted);text-align:right">Scores from admin${syncStr?' · synced '+syncStr:''} · auto-refreshes every 10 min</div>`;
   }else{
     html+=`<div class="alert alert-warn" style="margin-top:.85rem">⏳ Scores update as admin enters results or once the live API is configured.</div>`;
   }
@@ -1157,6 +1330,22 @@ function buildReadOnlyBracket(bkt){
   });
 
   html+=`</div></div>`;
+
+  // Champion probability card
+  const cp=champProb(bkt,t3);
+  if(cp){
+    const col=cp.pct>=15?'var(--green)':cp.pct>=7?'var(--gold)':'var(--red)';
+    const pathStr=cp.path.map(x=>`${esc(x.opp)} (${x.pct}%)`).join(' → ');
+    html+=`<div class="odds-card">
+      <div class="odds-pct" style="color:${col}">${cp.pct}%</div>
+      <div>
+        <div style="font-weight:600;font-size:.9rem">🏆 ${esc(bkt.wins?.[103]||'?')} wins the World Cup</div>
+        <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Predicted path: ${pathStr||'—'}</div>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">Based on FIFA Rankings · for entertainment only</div>
+      </div>
+    </div>`;
+  }
+
   return html;
 }
 
@@ -1195,8 +1384,16 @@ async function renderAdminPanel(){
   try{const {data:resRow}=await db.from('results').select('data').eq('id',1).maybeSingle();if(resRow?.data) res={...res,...resRow.data};}catch(e){}
   S._pendRes=JSON.parse(JSON.stringify(res));
 
-  let html=`<h2 style="margin-bottom:1rem">⚙️ Admin Panel</h2>
-    <div class="alert alert-info" style="margin-bottom:1.25rem">Enter actual results below. Participant scores update automatically when you save.</div>
+  // Check live API status
+  const liveData=_liveRes||(await fetchLiveResults().catch(()=>null));
+  const apiOk=liveData&&!liveData.error&&liveData.syncedAt;
+  const syncTime=apiOk?new Date(liveData.syncedAt).toLocaleTimeString():'';
+  const apiStatusHtml=apiOk
+    ?`<div class="api-status ok">🟢 <strong>Live API connected</strong> — football-data.org is providing automatic scores · last synced ${syncTime}. Manual entries below serve as fallback only.</div>`
+    :`<div class="api-status warn">🟡 <strong>Live API not active</strong> — enter results manually below, or add FOOTBALL_API_KEY in Vercel for automatic scoring.</div>`;
+
+  let html=`<h2 style="margin-bottom:1rem">⚙️ Admin Panel</h2>${apiStatusHtml}
+    <div class="alert alert-info" style="margin-bottom:1.25rem">Results entered here are used as fallback when the live API is unavailable. Participant scores update automatically when you save.</div>
     <div class="card"><div class="card-title">Group Stage Results</div><div class="admin-grid">`;
   for(const g of GK){
     const r=res.groups?.[g]||{};
@@ -1261,6 +1458,81 @@ async function saveResults(){
     const msg=document.getElementById('save-msg');
     if(msg){msg.style.display='block';msg.className='alert alert-ok';msg.textContent='✅ Results saved!';setTimeout(()=>msg.style.display='none',3000);}
   }catch(err){alert('Save failed: '+err.message);}
+}
+
+// ═══════════════════════════════════════════════
+//  GROUPS VIEW
+// ═══════════════════════════════════════════════
+async function loadGroups(){
+  const el=document.getElementById('grp-content');
+  el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading standings…</div>`;
+  let data=_liveRes;
+  if(!data||!data.groupStandings) data=await fetchLiveResults().catch(()=>null);
+  renderGroupsView(data,el);
+}
+
+function renderGroupsView(data,el){
+  const standings=data?.groupStandings||{};
+  let html=`<div class="alert alert-info" style="margin-bottom:1.25rem">
+    <strong>Advancement %</strong> = estimated chance of reaching the Round of 32.
+    Top 2 in each group qualify automatically; the best 8 of 12 third-place teams also advance.
+    Odds are computed from current standings + remaining fixture difficulty using FIFA World Rankings.
+    <br style="margin:.3rem 0 0;display:block">
+    <span style="color:var(--green)">■ Green ≥70%</span> &nbsp;
+    <span style="color:var(--gold)">■ Yellow 35–69%</span> &nbsp;
+    <span style="color:var(--red)">■ Red &lt;35%</span>
+  </div>`;
+
+  if(!Object.keys(standings).length){
+    html+=`<div class="alert alert-warn">Group standings are not yet available. They appear once matches begin and the live API is configured.</div>`;
+    el.innerHTML=html; return;
+  }
+
+  html+=`<div class="grp-std-grid">`;
+  for(const gk of GK){
+    const table=standings[gk]; if(!table) continue;
+    html+=`<div class="grp-std-card">
+      <div class="grp-std-hd">Group ${gk}</div>
+      <table class="grp-std-tbl">
+        <thead><tr>
+          <th>#</th><th>Team</th>
+          <th title="Played">P</th><th title="Won">W</th>
+          <th title="Draw">D</th><th title="Lost">L</th>
+          <th title="Goal difference">GD</th><th title="Points">Pts</th>
+          <th style="text-align:right;padding-right:.9rem">Adv%</th>
+        </tr></thead><tbody>`;
+
+    table.forEach((entry,idx)=>{
+      const pct=groupAdvPct(idx,table);
+      const col=pct>=70?'var(--green)':pct>=35?'var(--gold)':'var(--red)';
+      const gdStr=(entry.gd>=0?'+':'')+entry.gd;
+      html+=`<tr>
+        <td style="color:var(--muted)">${idx+1}</td>
+        <td>${esc(entry.team)}</td>
+        <td style="color:var(--muted)">${entry.played}</td>
+        <td style="color:var(--muted)">${entry.won}</td>
+        <td style="color:var(--muted)">${entry.draw}</td>
+        <td style="color:var(--muted)">${entry.lost}</td>
+        <td style="color:var(--muted)">${gdStr}</td>
+        <td style="font-weight:700">${entry.pts}</td>
+        <td>
+          <div class="adv-cell">
+            <div class="adv-bar-bg"><div class="adv-bar-fill" style="width:${pct}%;background:${col}"></div></div>
+            <span style="font-weight:700;color:${col};font-size:.75rem;min-width:34px;text-align:right">${pct}%</span>
+          </div>
+        </td>
+      </tr>`;
+    });
+
+    html+=`</tbody></table></div>`;
+  }
+  html+=`</div>`;
+
+  if(data?.syncedAt){
+    html+=`<div style="margin-top:.75rem;font-size:.72rem;color:var(--muted);text-align:right">
+      Last synced: ${new Date(data.syncedAt).toLocaleTimeString()} · auto-refreshes with leaderboard</div>`;
+  }
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════

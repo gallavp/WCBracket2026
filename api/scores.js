@@ -16,7 +16,6 @@ const NAME_MAP = {
   'Congo, DR':                'DR Congo',
   'Democratic Republic of Congo': 'DR Congo',
   'Republic of Korea':        'South Korea',
-  'Czechia':                  'Czechia',
   'Czech Republic':           'Czechia',
 };
 
@@ -25,7 +24,6 @@ function normName(n) { return NAME_MAP[n] || n; }
 function getWinner(match) {
   const { score } = match;
   if (!score) return null;
-  // Penalty shootout winner
   if (score.penalties && score.penalties.home != null) {
     return score.penalties.home > score.penalties.away
       ? match.homeTeam.name : match.awayTeam.name;
@@ -59,7 +57,9 @@ module.exports = async function handler(req, res) {
     const result = {
       groups: {}, thirdPlace: [],
       r32: [], r16: [], qf: [], sf: [],
-      champion: '', thirdPlaceWinner: '', topScorer: ''
+      champion: '', thirdPlaceWinner: '', topScorer: '',
+      groupStandings: {},   // full table per group for standings view
+      syncedAt: new Date().toISOString(),
     };
 
     const GMAP = {
@@ -68,19 +68,23 @@ module.exports = async function handler(req, res) {
       GROUP_I:'I', GROUP_J:'J', GROUP_K:'K', GROUP_L:'L',
     };
 
-    // --- Group standings ---
     const thirds = [];
+
     if (sd.standings) {
       for (const standing of sd.standings) {
         if (standing.type !== 'TOTAL') continue;
         const gk = GMAP[standing.group]; if (!gk) continue;
         const t = standing.table;
+
+        // Group winners/runners-up (used for scoring)
         if (t.length >= 2) {
           result.groups[gk] = {
             first:  normName(t[0].team.name),
             second: normName(t[1].team.name),
           };
         }
+
+        // Third-place candidates
         if (t.length >= 3) {
           thirds.push({
             group: gk,
@@ -89,14 +93,25 @@ module.exports = async function handler(req, res) {
             gf:    t[2].goalsFor,
           });
         }
+
+        // Full standings table for the Groups view + probability computation
+        result.groupStandings[gk] = t.map(entry => ({
+          team:   normName(entry.team.name),
+          played: entry.playedGames,
+          won:    entry.won,
+          draw:   entry.draw,
+          lost:   entry.lost,
+          gd:     entry.goalDifference,
+          gf:     entry.goalsFor,
+          ga:     entry.goalsAgainst,
+          pts:    entry.points,
+        }));
       }
     }
 
-    // Best 8 third-place teams by points → goal diff → goals for
     thirds.sort((a, b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf);
     result.thirdPlace = thirds.slice(0, 8).map(t => t.group);
 
-    // --- Knockout results ---
     if (md.matches) {
       for (const m of md.matches) {
         if (m.stage === 'GROUP_STAGE' || m.status !== 'FINISHED') continue;
@@ -114,7 +129,6 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Cache at Vercel CDN edge for 5 minutes
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.json(result);
   } catch (err) {
