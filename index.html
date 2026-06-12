@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AVP Group World Cup 2026 — Bracket Challenge</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icon-css/6.6.6/css/flag-icons.min.css" crossorigin="anonymous">
   <style>
     :root {
       --bg:#0d1117; --card:#161b22; --card2:#1c2230; --border:#30363d;
@@ -395,8 +396,8 @@ const FLAG_CODES = {
 function ft(t){
   if(!t) return '';
   const code=FLAG_CODES[t];
-  const img=code?`<img src="https://flagcdn.com/20x15/${code}.png" style="height:12px;vertical-align:middle;margin-right:4px;border-radius:1px;" alt="${esc(t)}">`:'';
-  return `${img}${esc(t)}`;
+  const flag=code?`<span class="fi fi-${code}" style="margin-right:5px;font-size:.95em;vertical-align:middle;border-radius:2px;flex-shrink:0"></span>`:'';
+  return `${flag}${esc(t)}`;
 }
 
 const STAGE_LABELS = {
@@ -722,17 +723,30 @@ function stepGroups(from,to,num){
   const keys=GK.filter(k=>k>=from&&k<=to);
   const cards=keys.map(g=>{
     const t=GROUPS[g],p=S.b.groups[g]||{};
-    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${esc(n)} (${preGroupAdvPct(n,g)}%)</option>`).join('');
+    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${esc(n)}</option>`).join('');
+    // Mini strength table shown below picks
+    const strengthRows=t.map(n=>{
+      const pct=preGroupAdvPct(n,g);
+      const col=pct>=65?'var(--green)':pct>=28?'var(--gold)':'var(--red)';
+      return`<div style="display:flex;align-items:center;gap:.4rem;padding:.18rem 0">
+        <span style="flex:1;font-size:.72rem">${ft(n)}</span>
+        <div style="width:44px;height:4px;background:rgba(255,255,255,.08);border-radius:2px;flex-shrink:0">
+          <div style="width:${pct}%;height:100%;background:${col};border-radius:2px"></div>
+        </div>
+        <span style="font-size:.7rem;font-weight:700;color:${col};min-width:30px;text-align:right">${pct}%</span>
+      </div>`;
+    }).join('');
     return`<div class="group-card"><h4>Group ${g}</h4>
       <div class="pick-row"><span class="pick-lbl"><span class="badge badge-gold">1st</span></span>
         <select data-g="${g}" data-pos="first"><option value="">— Pick winner —</option>${opts('first')}</select></div>
       <div class="pick-row"><span class="pick-lbl"><span class="badge badge-silver">2nd</span></span>
         <select data-g="${g}" data-pos="second"><option value="">— Pick runner-up —</option>${opts('second')}</select></div>
+      <div style="border-top:1px solid var(--border);margin-top:.6rem;padding-top:.5rem">${strengthRows}</div>
     </div>`;
   }).join('');
   const legend=`<div style="font-size:.74rem;color:var(--muted);margin-top:.85rem;padding:.6rem .8rem;background:rgba(255,255,255,.03);border-radius:var(--radius);border:1px solid var(--border)">
-    📊 <strong style="color:var(--text)">% in dropdown</strong> = estimated probability of that team advancing to the Round of 32, based on pre-tournament FIFA World Rankings.
-    Top 2 in each group qualify automatically (~82% and ~65%); the best 8 of 12 third-place teams also advance (~28%).
+    📊 <strong style="color:var(--text)">%</strong> = estimated probability of each team advancing to the Round of 32, based on pre-tournament FIFA World Rankings.
+    <span style="color:var(--green)">■ Green ≥65%</span> &nbsp; <span style="color:var(--gold)">■ Yellow 28–64%</span> &nbsp; <span style="color:var(--red)">■ Red &lt;28%</span>
   </div>`;
   return`
     <div class="step-hd"><div class="step-num">Step ${num}/${STEPS.length}</div>
@@ -752,10 +766,12 @@ function stepThird(){
     const pct0=rem[0]&&rem[1]?matchProb(rem[0],rem[1]):50;
     const pct1=rem[0]&&rem[1]?100-pct0:50;
     const b0=`<div class="third-team-btn${sel===rem[0]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[0]||'')}">
-      ${rem[0]?ft(rem[0]):'?'}${rem[0]&&rem[1]?`<span style="font-size:.65rem;color:var(--muted);margin-left:.3rem">(${pct0}%)</span>`:''}
+      <div>${rem[0]?ft(rem[0]):'?'}</div>
+      ${rem[0]&&rem[1]?`<div style="font-size:.68rem;font-weight:700;color:var(--gold);margin-top:.15rem">${pct0}%</div>`:''}
     </div>`;
     const b1=rem[1]?`<div class="third-team-btn${sel===rem[1]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[1])}">
-      ${ft(rem[1])}<span style="font-size:.65rem;color:var(--muted);margin-left:.3rem">(${pct1}%)</span>
+      <div>${ft(rem[1])}</div>
+      <div style="font-size:.68rem;font-weight:700;color:var(--gold);margin-top:.15rem">${pct1}%</div>
     </div>`:`<div></div>`;
     return`<div class="third-group-card" id="tgc-${g}">
       <h4>Group ${g} — pick 3rd place</h4>
