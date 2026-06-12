@@ -58,7 +58,8 @@ module.exports = async function handler(req, res) {
       groups: {}, thirdPlace: [],
       r32: [], r16: [], qf: [], sf: [],
       champion: '', thirdPlaceWinner: '', topScorer: '',
-      groupStandings: {},   // full table per group for standings view
+      groupStandings: {},
+      allMatches: [],
       syncedAt: new Date().toISOString(),
     };
 
@@ -113,6 +114,22 @@ module.exports = async function handler(req, res) {
     result.thirdPlace = thirds.slice(0, 8).map(t => t.group);
 
     if (md.matches) {
+      // Full schedule for the Schedule tab
+      result.allMatches = md.matches.map(m => ({
+        id:        m.id,
+        utcDate:   m.utcDate,
+        status:    m.status,
+        minute:    m.minute || null,
+        stage:     m.stage,
+        group:     m.group || null,
+        matchday:  m.matchday || null,
+        homeTeam:  normName(m.homeTeam?.name || ''),
+        awayTeam:  normName(m.awayTeam?.name || ''),
+        homeScore: m.score?.fullTime?.home ?? null,
+        awayScore: m.score?.fullTime?.away ?? null,
+        venue:     m.venue || null,
+      }));
+
       for (const m of md.matches) {
         if (m.stage === 'GROUP_STAGE' || m.status !== 'FINISHED') continue;
         const winner = getWinner(m);

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>World Cup 2026 — Bracket Challenge</title>
+  <title>AVP Group World Cup 2026 — Bracket Challenge</title>
   <style>
     :root {
       --bg:#0d1117; --card:#161b22; --card2:#1c2230; --border:#30363d;
@@ -184,30 +184,67 @@
     .api-status.ok{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);}
     .api-status.warn{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);color:#f0cd5e;}
 
+    /* LOGO RIBBON */
+    .logo-ribbon{background:#fff;border-bottom:1px solid #ddd;padding:.45rem 1.5rem;display:flex;align-items:center;justify-content:center;gap:2rem;flex-wrap:wrap;}
+    .logo-ribbon img{height:36px;object-fit:contain;max-width:120px;}
+
+    /* DEADLINE BANNER */
+    .deadline-banner{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);border-radius:var(--radius);padding:.7rem 1rem;margin-bottom:1rem;display:flex;align-items:center;gap:.6rem;font-size:.875rem;color:var(--gold);}
+    .deadline-banner.locked{background:rgba(248,81,73,.08);border-color:rgba(248,81,73,.3);color:var(--red);}
+
+    /* SCHEDULE */
+    .sched-day{margin-bottom:1.75rem;}
+    .sched-day-hd{font-size:.82rem;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--gold);padding:.5rem 0;border-bottom:1px solid var(--border);margin-bottom:.65rem;}
+    .sched-matches{display:grid;gap:.5rem;}
+    .sched-match{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:.65rem .9rem;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.5rem;}
+    .sched-match.live{border-color:rgba(63,185,80,.4);background:rgba(63,185,80,.04);}
+    .sched-team{font-size:.875rem;font-weight:500;}
+    .sched-team.home{text-align:right;}
+    .sched-team.away{text-align:left;}
+    .sched-center{display:flex;flex-direction:column;align-items:center;gap:.2rem;}
+    .sched-score{font-size:1.1rem;font-weight:700;color:var(--text);}
+    .sched-status{font-size:.68rem;padding:.15rem .45rem;border-radius:999px;font-weight:600;white-space:nowrap;}
+    .sched-status.ft{background:rgba(255,255,255,.08);color:var(--muted);}
+    .sched-status.live-badge{background:var(--green-bg);border:1px solid var(--green-border);color:var(--green);}
+    .sched-status.sched-time{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);color:var(--blue);}
+    .sched-venue{font-size:.68rem;color:var(--muted);text-align:center;grid-column:1/-1;margin-top:.15rem;}
+    .sched-meta{font-size:.68rem;color:var(--muted);text-align:center;}
+
     /* MOBILE */
     @media(max-width:560px){
       .hero h1{font-size:1.7rem;}
       .pts-grid{grid-template-columns:1fr;}
       .groups-grid,.third-group-grid,.grp-std-grid{grid-template-columns:1fr;}
+      .sched-match{grid-template-columns:1fr auto 1fr;}
+      .logo-ribbon{gap:1rem;}
+      .logo-ribbon img{height:28px;}
     }
   </style>
 </head>
 <body>
 
 <nav>
-  <span class="nav-brand">⚽ WC2026</span>
+  <span class="nav-brand">⚽ AVP WC2026</span>
   <button class="nav-btn active" data-view="home">Home</button>
   <button class="nav-btn" data-view="bracket">My Bracket</button>
   <button class="nav-btn" data-view="groups">Groups</button>
+  <button class="nav-btn" data-view="schedule">Schedule</button>
   <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
   <button class="nav-btn" data-view="admin">Admin</button>
 </nav>
+<div class="logo-ribbon">
+  <img src="/logos/avp.png" alt="AVP" title="Ashford Venture Partners">
+  <img src="/logos/logo2.png" alt="AVP Group" title="AVP Group">
+  <img src="/logos/icon.png" alt="ICON Community Management" title="ICON Community Management">
+  <img src="/logos/qmc.png" alt="QMC Telecom" title="QMC Telecom">
+  <img src="/logos/elogo.png" alt="e" title="e">
+</div>
 
 <!-- HOME -->
 <div id="view-home" class="view active">
   <div class="container">
     <div class="hero">
-      <h1>World Cup 2026</h1>
+      <h1>AVP Group World Cup 2026</h1>
       <div class="subtitle">Bracket Challenge</div>
       <p>Predict the tournament. Earn points. Win glory.</p>
       <div class="btn-group">
@@ -215,6 +252,7 @@
         <button class="btn btn-secondary" data-view="leaderboard">🏆 Leaderboard</button>
       </div>
     </div>
+    <div id="home-deadline-banner"></div>
     <div class="card">
       <div class="card-title">How to Score Points</div>
       <div class="pts-grid">
@@ -260,6 +298,17 @@
       <button class="btn btn-secondary" id="grp-refresh" style="font-size:.78rem;padding:.3rem .65rem">↻ Refresh</button>
     </div>
     <div id="grp-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- SCHEDULE -->
+<div id="view-schedule" class="view">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <h2 style="font-size:1.3rem">📅 Tournament Schedule</h2>
+      <button class="btn btn-secondary" id="sched-refresh" style="font-size:.78rem;padding:.3rem .65rem">↻ Refresh</button>
+    </div>
+    <div id="sched-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </div>
 </div>
 
@@ -325,6 +374,37 @@ const SCORERS = ["Kylian Mbappé","Erling Haaland","Lionel Messi","Cristiano Ron
   "Vinicius Jr.","Harry Kane","Bukayo Saka","Phil Foden","Lautaro Martínez",
   "Pedri","Gavi","Rodri","Kai Havertz","Romelu Lukaku","Jonathan David",
   "Richarlison","Alphonso Davies","Hirving Lozano","Raúl Jiménez","Memphis Depay"];
+
+// ═══════════════════════════════════════════════
+//  COUNTRY FLAGS
+// ═══════════════════════════════════════════════
+const FLAGS = {
+  "Mexico":"🇲🇽","South Korea":"🇰🇷","Czechia":"🇨🇿","South Africa":"🇿🇦",
+  "Canada":"🇨🇦","Switzerland":"🇨🇭","Bosnia-Herzegovina":"🇧🇦","Qatar":"🇶🇦",
+  "Morocco":"🇲🇦","Brazil":"🇧🇷","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Haiti":"🇭🇹",
+  "United States":"🇺🇸","Türkiye":"🇹🇷","Australia":"🇦🇺","Paraguay":"🇵🇾",
+  "Germany":"🇩🇪","Ivory Coast":"🇨🇮","Ecuador":"🇪🇨","Curaçao":"🇨🇼",
+  "Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳",
+  "Belgium":"🇧🇪","Iran":"🇮🇷","Egypt":"🇪🇬","New Zealand":"🇳🇿",
+  "Spain":"🇪🇸","Saudi Arabia":"🇸🇦","Uruguay":"🇺🇾","Cape Verde":"🇨🇻",
+  "France":"🇫🇷","Senegal":"🇸🇳","Norway":"🇳🇴","Iraq":"🇮🇶",
+  "Argentina":"🇦🇷","Austria":"🇦🇹","Algeria":"🇩🇿","Jordan":"🇯🇴",
+  "Portugal":"🇵🇹","Colombia":"🇨🇴","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿",
+  "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croatia":"🇭🇷","Panama":"🇵🇦","Ghana":"🇬🇭",
+};
+function ft(t){if(!t)return'';const f=FLAGS[t]||'';return f?`${f} ${esc(t)}`:esc(t);}
+
+const STAGE_LABELS = {
+  'GROUP_STAGE':'Group Stage','ROUND_OF_32':'Round of 32',
+  'ROUND_OF_16':'Round of 16','QUARTER_FINALS':'Quarterfinals',
+  'SEMI_FINALS':'Semifinals','THIRD_PLACE':'3rd Place Match','FINAL':'Final',
+};
+
+// ═══════════════════════════════════════════════
+//  ENTRY DEADLINE — June 12, 2026 6 PM EST (23:00 UTC)
+// ═══════════════════════════════════════════════
+const DEADLINE = new Date('2026-06-12T23:00:00Z');
+function isLocked(){ return Date.now() >= DEADLINE.getTime(); }
 
 // ═══════════════════════════════════════════════
 //  FIFA WORLD RANKING POINTS (frozen at WC2026 draw — Jun 2026 estimates)
@@ -461,7 +541,7 @@ const BD = {
  104:{r:'third',t1:'L:101', t2:'L:102',    next:null,ns:0}
 };
 
-const R32_ORDER = [73,74,75,77, 83,84,81,82, 76,78,79,80, 86,88,85,87];
+const R32_ORDER = [73,75,74,77, 83,84,81,82, 76,78,79,80, 86,88,85,87];
 
 // Bracket layout constants
 const MH=56, SH=76, CW=155, CG=22;
@@ -512,6 +592,7 @@ document.querySelectorAll('[data-view]').forEach(el=>{
 });
 document.getElementById('lb-refresh').addEventListener('click',loadLeaderboard);
 document.getElementById('grp-refresh').addEventListener('click',()=>{_liveRes=null;_liveResTS=0;loadGroups();});
+document.getElementById('sched-refresh').addEventListener('click',()=>{_liveRes=null;_liveResTS=0;loadSchedule();});
 document.getElementById('modal-close').addEventListener('click',hideEntryModal);
 document.getElementById('entry-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('entry-modal')) hideEntryModal();
@@ -519,10 +600,12 @@ document.getElementById('entry-modal').addEventListener('click',e=>{
 document.addEventListener('keydown',e=>{if(e.key==='Escape') hideEntryModal();});
 
 function showView(v){
-  // Clean up leaderboard real-time listener + refresh timer when leaving
   if(S.view==='leaderboard'&&v!=='leaderboard'){
     if(_lbUnsub){_lbUnsub();_lbUnsub=null;}
     if(_lbRefreshTimer){clearInterval(_lbRefreshTimer);_lbRefreshTimer=null;}
+  }
+  if(S.view==='schedule'&&v!=='schedule'){
+    if(_schedRefreshTimer){clearInterval(_schedRefreshTimer);_schedRefreshTimer=null;}
   }
   document.querySelectorAll('.view').forEach(e=>e.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(e=>e.classList.remove('active'));
@@ -533,6 +616,7 @@ function showView(v){
   if(v==='bracket')     initBracket();
   if(v==='admin')       initAdmin();
   if(v==='groups')      loadGroups();
+  if(v==='schedule')    loadSchedule();
 }
 
 // ═══════════════════════════════════════════════
@@ -564,6 +648,15 @@ async function initBracket(){
       return;
     }
   }else{
+    if(isLocked()){
+      document.getElementById('bracket-content').innerHTML=`
+        <div style="text-align:center;padding:3rem 1rem">
+          <div style="font-size:3rem;margin-bottom:.75rem">🔒</div>
+          <h2 style="color:var(--muted);margin-bottom:.5rem">Entries are Locked</h2>
+          <p style="color:var(--muted)">The entry deadline was June 12 at 6 PM EST.<br>No new brackets can be submitted.</p>
+        </div>`;
+      return;
+    }
     S.step=0;
   }
   renderStep();
@@ -612,7 +705,7 @@ function stepGroups(from,to,num){
   const keys=GK.filter(k=>k>=from&&k<=to);
   const cards=keys.map(g=>{
     const t=GROUPS[g],p=S.b.groups[g]||{};
-    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${esc(n)}</option>`).join('');
+    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${ft(n)}</option>`).join('');
     return`<div class="group-card"><h4>Group ${g}</h4>
       <div class="pick-row"><span class="pick-lbl"><span class="badge badge-gold">1st</span></span>
         <select data-g="${g}" data-pos="first"><option value="">— Pick winner —</option>${opts('first')}</select></div>
@@ -634,8 +727,8 @@ function stepThird(){
     const p=S.b.groups[g]||{};
     const rem=GROUPS[g].filter(t=>t!==p.first&&t!==p.second);
     const sel=S.b.thirdTeams[g]; // which team is selected (or undefined)
-    const b0=`<div class="third-team-btn${sel===rem[0]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[0]||'')}">${esc(rem[0]||'?')}</div>`;
-    const b1=rem[1]?`<div class="third-team-btn${sel===rem[1]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[1])}">${esc(rem[1])}</div>`:`<div></div>`;
+    const b0=`<div class="third-team-btn${sel===rem[0]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[0]||'')}">${rem[0]?ft(rem[0]):'?'}</div>`;
+    const b1=rem[1]?`<div class="third-team-btn${sel===rem[1]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[1])}">${ft(rem[1])}</div>`:`<div></div>`;
     return`<div class="third-group-card" id="tgc-${g}">
       <h4>Group ${g} — pick 3rd place</h4>
       <div class="third-team-btns">${b0}${b1}</div>
@@ -684,11 +777,11 @@ function stepBracket(){
   const cp=champProb(S.b,S._t3);
   if(cp){
     const col=cp.pct>=15?'var(--green)':cp.pct>=7?'var(--gold)':'var(--red)';
-    const pathStr=cp.path.map(x=>`${esc(x.opp)} (${x.pct}%)`).join(' → ');
+    const pathStr=cp.path.map(x=>`${ft(x.opp)} (${x.pct}%)`).join(' → ');
     html+=`<div class="odds-card">
       <div class="odds-pct" style="color:${col}">${cp.pct}%</div>
       <div>
-        <div style="font-weight:600;font-size:.9rem">🏆 ${esc(wins[103])} wins the World Cup</div>
+        <div style="font-weight:600;font-size:.9rem">🏆 ${ft(wins[103])} wins the World Cup</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Estimated based on FIFA Rankings — predicted path: ${pathStr||'resolving…'}</div>
         <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">Rankings frozen at tournament start · for entertainment only</div>
       </div>
@@ -709,10 +802,10 @@ function matchCard(mid,t1,t2,w,cx,cy){
   if(t1&&t2){const p=matchProb(t1,t2);p1=`<span class="bm-prob">${p}%</span>`;p2=`<span class="bm-prob">${100-p}%</span>`;}
   return`<div class="bm" style="left:${cx}px;top:${top}px">
     <div class="bm-t ${r1} ${tb1}" data-action="bpick" data-mid="${mid}" data-team="${esc(t1||'')}">
-      <span class="bm-name">${esc(t1||'TBD')}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${t1?ft(t1):'TBD'}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
     </div>
     <div class="bm-t ${r2} ${tb2}" data-action="bpick" data-mid="${mid}" data-team="${esc(t2||'')}">
-      <span class="bm-name">${esc(t2||'TBD')}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${t2?ft(t2):'TBD'}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
     </div>
   </div>`;
 }
@@ -725,10 +818,10 @@ function matchCardReadOnly(mid,t1,t2,w,cx,cy){
   if(t1&&t2){const p=matchProb(t1,t2);p1=`<span class="bm-prob">${p}%</span>`;p2=`<span class="bm-prob">${100-p}%</span>`;}
   return`<div class="bm" style="left:${cx}px;top:${top}px;pointer-events:none">
     <div class="bm-t ${r1} ${tb1}">
-      <span class="bm-name">${esc(t1||'TBD')}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${t1?ft(t1):'TBD'}</span>${p1}${w===t1?'<span class="bm-chk">✓</span>':''}
     </div>
     <div class="bm-t ${r2} ${tb2}">
-      <span class="bm-name">${esc(t2||'TBD')}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
+      <span class="bm-name">${t2?ft(t2):'TBD'}</span>${p2}${w===t2?'<span class="bm-chk">✓</span>':''}
     </div>
   </div>`;
 }
@@ -751,43 +844,53 @@ function buildSVG(){
   return`<svg style="position:absolute;top:0;left:0;width:${BWIDTH}px;height:${BTOTAL}px;pointer-events:none" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 }
 
-// ── 3rd place slot assignment ─────────────────
+// ── 3rd place slot assignment (backtracking) ──
+const THIRD_SLOTS=[
+  {mid:74,elig:['A','B','C','D','F']},
+  {mid:77,elig:['C','D','F','G','H']},
+  {mid:79,elig:['C','E','F','H','I']},
+  {mid:80,elig:['E','H','I','J','K']},
+  {mid:81,elig:['B','E','F','I','J']},
+  {mid:82,elig:['A','E','H','I','J']},
+  {mid:85,elig:['E','F','G','I','J']},
+  {mid:87,elig:['D','E','I','J','L']},
+];
 function resolveThirdAssign(){
-  const slots=[
-    {mid:74,elig:['A','B','C','D','F']},
-    {mid:77,elig:['C','D','F','G','H']},
-    {mid:79,elig:['C','E','F','H','I']},
-    {mid:80,elig:['E','H','I','J','K']},
-    {mid:81,elig:['B','E','F','I','J']},
-    {mid:82,elig:['A','E','H','I','J']},
-    {mid:85,elig:['E','F','G','I','J']},
-    {mid:87,elig:['D','E','I','J','L']},
-  ];
+  const pool=S.b.third||[];
   const used=new Set(),res={};
-  for(const{mid,elig} of slots){
-    const g=(S.b.third||[]).find(x=>elig.includes(x)&&!used.has(x));
-    if(g){used.add(g);res[mid]=g;}
+  function bt(i){
+    if(i===THIRD_SLOTS.length) return true;
+    const{mid,elig}=THIRD_SLOTS[i];
+    for(const g of elig){
+      if(pool.includes(g)&&!used.has(g)){
+        used.add(g);res[mid]=g;
+        if(bt(i+1)) return true;
+        used.delete(g);delete res[mid];
+      }
+    }
+    return false;
   }
+  bt(0);
   return res;
 }
 
 // Same but for an arbitrary bracket (read-only modal)
 function resolveThirdForBkt(bkt){
-  const slots=[
-    {mid:74,elig:['A','B','C','D','F']},
-    {mid:77,elig:['C','D','F','G','H']},
-    {mid:79,elig:['C','E','F','H','I']},
-    {mid:80,elig:['E','H','I','J','K']},
-    {mid:81,elig:['B','E','F','I','J']},
-    {mid:82,elig:['A','E','H','I','J']},
-    {mid:85,elig:['E','F','G','I','J']},
-    {mid:87,elig:['D','E','I','J','L']},
-  ];
+  const pool=bkt.third||[];
   const used=new Set(),res={};
-  for(const{mid,elig} of slots){
-    const g=(bkt.third||[]).find(x=>elig.includes(x)&&!used.has(x));
-    if(g){used.add(g);res[mid]=g;}
+  function bt(i){
+    if(i===THIRD_SLOTS.length) return true;
+    const{mid,elig}=THIRD_SLOTS[i];
+    for(const g of elig){
+      if(pool.includes(g)&&!used.has(g)){
+        used.add(g);res[mid]=g;
+        if(bt(i+1)) return true;
+        used.delete(g);delete res[mid];
+      }
+    }
+    return false;
   }
+  bt(0);
   return res;
 }
 
@@ -886,13 +989,13 @@ function stepReview(){
     const p=b.groups[g]||{};
     html+=`<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:.7rem">
       <div style="font-size:.68rem;color:var(--gold);font-weight:700;margin-bottom:.35rem">Group ${g}</div>
-      <div style="font-size:.82rem">🥇 ${esc(p.first||'—')}</div>
-      <div style="font-size:.82rem">🥈 ${esc(p.second||'—')}</div>
+      <div style="font-size:.82rem">🥇 ${p.first?ft(p.first):'—'}</div>
+      <div style="font-size:.82rem">🥈 ${p.second?ft(p.second):'—'}</div>
     </div>`;
   }
   html+=`</div></div>`;
   html+=`<div class="card"><div class="card-title">3rd-Place Qualifiers</div>
-    <div>${(b.third||[]).map(g=>`<span class="tag">Grp ${g}: ${esc(b.thirdTeams?.[g]||'?')}</span>`).join('')||'<em style="color:var(--muted)">None</em>'}</div></div>`;
+    <div>${(b.third||[]).map(g=>`<span class="tag">Grp ${g}: ${b.thirdTeams?.[g]?ft(b.thirdTeams[g]):'?'}</span>`).join('')||'<em style="color:var(--muted)">None</em>'}</div></div>`;
   const rndLabels=[
     ['r32',[73,74,75,77,83,84,81,82,76,78,79,80,86,88,85,87],'R32 Advancers'],
     ['r16',[89,90,91,92,93,94,95,96],'R16 Advancers'],
@@ -902,17 +1005,21 @@ function stepReview(){
   html+=`<div class="card"><div class="card-title">Knockout Bracket</div>`;
   for(const [,ids,lbl] of rndLabels){
     const teams=ids.map(id=>w[id]).filter(Boolean);
-    html+=`<div class="sum-sec"><h4>${lbl}</h4><div>${teams.map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'<em style="color:var(--muted)">—</em>'}</div></div>`;
+    html+=`<div class="sum-sec"><h4>${lbl}</h4><div>${teams.map(t=>`<span class="tag">${ft(t)}</span>`).join('')||'<em style="color:var(--muted)">—</em>'}</div></div>`;
   }
-  html+=`<div class="sum-sec"><h4>Champion 🏆</h4><div>${w[103]?`<span class="tag champ">${esc(w[103])}</span>`:'<em style="color:var(--muted)">—</em>'}</div></div>`;
-  html+=`<div class="sum-sec"><h4>3rd Place Winner</h4><div>${w[104]?`<span class="tag">${esc(w[104])}</span>`:'<em style="color:var(--muted)">—</em>'}</div></div>`;
+  html+=`<div class="sum-sec"><h4>Champion 🏆</h4><div>${w[103]?`<span class="tag champ">${ft(w[103])}</span>`:'<em style="color:var(--muted)">—</em>'}</div></div>`;
+  html+=`<div class="sum-sec"><h4>3rd Place Winner</h4><div>${w[104]?`<span class="tag">${ft(w[104])}</span>`:'<em style="color:var(--muted)">—</em>'}</div></div>`;
   html+=`<div class="sum-sec"><h4>Top Scorer ⚽</h4><div>${b.topScorer?`<span class="tag">${esc(b.topScorer)}</span>`:'<em style="color:var(--muted)">—</em>'}</div></div>`;
   html+=`</div>`;
-  html+=`<div id="submit-err" style="display:none"></div>
-    <div class="step-nav">
+  html+=`<div id="submit-err" style="display:none"></div>`;
+  if(isLocked()){
+    html+=`<div class="alert alert-warn" style="margin-top:1rem">🔒 Entries are locked — no further edits or submissions permitted (deadline: June 12, 6 PM EST).</div>`;
+  }else{
+    html+=`<div class="step-nav">
       <button class="btn btn-secondary" id="btn-edit">✏️ Edit</button>
       <button class="btn btn-primary" id="btn-submit">🚀 Submit Bracket</button>
     </div>`;
+  }
   return html;
 }
 
@@ -1030,6 +1137,7 @@ document.addEventListener('change',e=>{
 //  STEP VALIDATION
 // ═══════════════════════════════════════════════
 function handleNext(){
+  if(isLocked()){alert('Entries are locked. The deadline was June 12 at 6 PM EST.');return;}
   const id=STEPS[S.step];
   switch(id){
     case 'name':{
@@ -1079,6 +1187,11 @@ function validateGroups(from,to){
 //  SUBMIT
 // ═══════════════════════════════════════════════
 async function submitBracket(){
+  if(isLocked()){
+    const e=document.getElementById('submit-err');
+    if(e){e.style.display='block';e.className='alert alert-err';e.textContent='🔒 Entries are locked. The deadline was June 12 at 6 PM EST.';}
+    return;
+  }
   // Config guard
   if(SUPABASE_URL==='YOUR_SUPABASE_URL'||SUPABASE_KEY==='YOUR_SUPABASE_ANON_KEY'){
     const e=document.getElementById('submit-err');
@@ -1297,14 +1410,14 @@ function buildReadOnlyBracket(bkt){
     const p=bkt.groups?.[g]||{};
     html+=`<div style="background:rgba(255,255,255,.03);border-radius:6px;padding:.7rem">
       <div style="font-size:.68rem;color:var(--gold);font-weight:700;margin-bottom:.3rem">Group ${g}</div>
-      <div style="font-size:.82rem">🥇 ${esc(p.first||'—')}</div>
-      <div style="font-size:.82rem">🥈 ${esc(p.second||'—')}</div>
+      <div style="font-size:.82rem">🥇 ${p.first?ft(p.first):'—'}</div>
+      <div style="font-size:.82rem">🥈 ${p.second?ft(p.second):'—'}</div>
     </div>`;
   }
   html+=`</div></div>`;
 
   // 3rd-place picks
-  const thirdList=(bkt.third||[]).map(g=>`<span class="tag">Grp ${g}: ${esc(bkt.thirdTeams?.[g]||'?')}</span>`).join('');
+  const thirdList=(bkt.third||[]).map(g=>`<span class="tag">Grp ${g}: ${bkt.thirdTeams?.[g]?ft(bkt.thirdTeams[g]):'?'}</span>`).join('');
   html+=`<div class="card"><div class="card-title">3rd-Place Qualifiers</div>
     <div>${thirdList||'<em style="color:var(--muted)">None</em>'}</div></div>`;
 
@@ -1335,11 +1448,11 @@ function buildReadOnlyBracket(bkt){
   const cp=champProb(bkt,t3);
   if(cp){
     const col=cp.pct>=15?'var(--green)':cp.pct>=7?'var(--gold)':'var(--red)';
-    const pathStr=cp.path.map(x=>`${esc(x.opp)} (${x.pct}%)`).join(' → ');
+    const pathStr=cp.path.map(x=>`${ft(x.opp)} (${x.pct}%)`).join(' → ');
     html+=`<div class="odds-card">
       <div class="odds-pct" style="color:${col}">${cp.pct}%</div>
       <div>
-        <div style="font-weight:600;font-size:.9rem">🏆 ${esc(bkt.wins?.[103]||'?')} wins the World Cup</div>
+        <div style="font-weight:600;font-size:.9rem">🏆 ${ft(bkt.wins?.[103]||'')||'?'} wins the World Cup</div>
         <div style="font-size:.75rem;color:var(--muted);margin-top:.2rem">Predicted path: ${pathStr||'—'}</div>
         <div style="font-size:.7rem;color:var(--muted);margin-top:.1rem">Based on FIFA Rankings · for entertainment only</div>
       </div>
@@ -1397,7 +1510,7 @@ async function renderAdminPanel(){
     <div class="card"><div class="card-title">Group Stage Results</div><div class="admin-grid">`;
   for(const g of GK){
     const r=res.groups?.[g]||{};
-    const opts=pos=>GROUPS[g].map(t=>`<option value="${esc(t)}" ${r[pos]===t?'selected':''}>${esc(t)}</option>`).join('');
+    const opts=pos=>GROUPS[g].map(t=>`<option value="${esc(t)}" ${r[pos]===t?'selected':''}>${ft(t)}</option>`).join('');
     html+=`<div class="group-card"><h4>Group ${g}</h4>
       <div class="pick-row"><span class="pick-lbl"><span class="badge badge-gold">1st</span></span>
         <select data-result-group="${g}" data-pos="first"><option value="">—</option>${opts('first')}</select></div>
@@ -1422,21 +1535,36 @@ async function renderAdminPanel(){
     const cur=res[key]||[];
     html+=`<div class="card"><div class="card-title">${esc(label)}</div>
       <div class="team-grid">${ALL_TEAMS.map(t=>
-        `<div class="team-chip${cur.includes(t)?' sel':''}" data-action="result-ko" data-key="${key}" data-max="${max}" data-team="${esc(t)}">${esc(t)}</div>`
+        `<div class="team-chip${cur.includes(t)?' sel':''}" data-action="result-ko" data-key="${key}" data-max="${max}" data-team="${esc(t)}">${ft(t)}</div>`
       ).join('')}</div></div>`;
   }
 
   html+=`<div class="card"><div class="card-title">Final &amp; Bonus</div>
     <div class="form-group"><label>Champion 🏆</label>
       <select id="res-champ"><option value="">—</option>
-        ${ALL_TEAMS.map(t=>`<option value="${esc(t)}" ${res.champion===t?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
+        ${ALL_TEAMS.map(t=>`<option value="${esc(t)}" ${res.champion===t?'selected':''}>${ft(t)}</option>`).join('')}</select></div>
     <div class="form-group"><label>3rd Place Match Winner</label>
       <select id="res-third-winner"><option value="">—</option>
-        ${ALL_TEAMS.map(t=>`<option value="${esc(t)}" ${res.thirdPlaceWinner===t?'selected':''}>${esc(t)}</option>`).join('')}</select></div>
+        ${ALL_TEAMS.map(t=>`<option value="${esc(t)}" ${res.thirdPlaceWinner===t?'selected':''}>${ft(t)}</option>`).join('')}</select></div>
     <div class="form-group"><label>Top Scorer ⚽</label>
       <input type="text" id="res-scorer" value="${esc(res.topScorer||'')}" placeholder="Exact player name" list="scorer-dl2" autocomplete="off">
       <datalist id="scorer-dl2">${SCORERS.map(s=>`<option value="${esc(s)}">`).join('')}</datalist>
     </div></div>`;
+
+  // Load participant entries for delete feature
+  let bktRows=[];
+  try{const{data:br=[]}=await db.from('brackets').select('pid,data');bktRows=br;}catch(e){}
+  if(bktRows.length){
+    html+=`<div class="card"><div class="card-title">Participant Entries (${bktRows.length}) — delete to allow re-entry</div>`;
+    for(const row of bktRows){
+      const nm=esc(row.data?.name||'Unnamed');
+      html+=`<div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--border)">
+        <span style="font-size:.875rem">${nm}</span>
+        <button class="btn btn-secondary" style="font-size:.72rem;padding:.2rem .55rem;color:var(--red);border-color:rgba(248,81,73,.4)" onclick="deleteEntry('${esc(row.pid)}','${nm}')">🗑 Delete</button>
+      </div>`;
+    }
+    html+=`</div>`;
+  }
 
   html+=`<div style="display:flex;justify-content:space-between;padding:.5rem 0 1.5rem">
     <button class="btn btn-secondary" id="btn-admin-logout">Log Out</button>
@@ -1458,6 +1586,97 @@ async function saveResults(){
     const msg=document.getElementById('save-msg');
     if(msg){msg.style.display='block';msg.className='alert alert-ok';msg.textContent='✅ Results saved!';setTimeout(()=>msg.style.display='none',3000);}
   }catch(err){alert('Save failed: '+err.message);}
+}
+
+// ── Admin delete participant entry ────────────
+async function deleteEntry(pid,name){
+  if(!confirm(`Delete ${name}'s bracket? They will be able to re-enter.`)) return;
+  try{
+    const{error}=await db.from('brackets').delete().eq('pid',pid);
+    if(error) throw error;
+    alert(`${name}'s bracket has been deleted.`);
+    renderAdminPanel();
+  }catch(err){alert('Delete failed: '+err.message);}
+}
+
+// ═══════════════════════════════════════════════
+//  SCHEDULE VIEW
+// ═══════════════════════════════════════════════
+let _schedRefreshTimer=null;
+
+async function loadSchedule(){
+  if(_schedRefreshTimer){clearInterval(_schedRefreshTimer);_schedRefreshTimer=null;}
+  const el=document.getElementById('sched-content');
+  if(!el) return;
+  el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading schedule…</div>`;
+  let data=_liveRes;
+  if(!data||!data.allMatches) data=await fetchLiveResults().catch(()=>null);
+  renderScheduleView(data,el);
+  // Auto-refresh every 60s if any live matches
+  const hasLive=(data?.allMatches||[]).some(m=>m.status==='IN_PLAY'||m.status==='PAUSED');
+  if(hasLive){
+    _schedRefreshTimer=setInterval(async()=>{
+      if(S.view!=='schedule'||!document.getElementById('sched-content')){clearInterval(_schedRefreshTimer);_schedRefreshTimer=null;return;}
+      _liveRes=null;_liveResTS=0;
+      const d=await fetchLiveResults().catch(()=>null);
+      renderScheduleView(d,document.getElementById('sched-content'));
+    },60000);
+  }
+}
+
+function renderScheduleView(data,el){
+  const matches=data?.allMatches||[];
+  if(!matches.length){
+    el.innerHTML=`<div class="alert alert-warn">Schedule not available yet. The live API must be configured with a FOOTBALL_API_KEY in Vercel to load match data.</div>`;
+    return;
+  }
+  // Group by local date string
+  const byDay={};
+  for(const m of matches){
+    const day=m.utcDate?m.utcDate.slice(0,10):'unknown';
+    if(!byDay[day]) byDay[day]=[];
+    byDay[day].push(m);
+  }
+  const days=Object.keys(byDay).sort();
+  let html='';
+  for(const day of days){
+    const dayMs=new Date(day+'T00:00:00Z');
+    const dayLabel=isNaN(dayMs)?day:dayMs.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',timeZone:'UTC'});
+    html+=`<div class="sched-day"><div class="sched-day-hd">${dayLabel}</div><div class="sched-matches">`;
+    for(const m of byDay[day]){
+      const isLiveMatch=m.status==='IN_PLAY'||m.status==='PAUSED';
+      const isFin=m.status==='FINISHED';
+      let statusBadge='';
+      if(isFin){
+        statusBadge=`<span class="sched-status ft">FT</span>`;
+      }else if(isLiveMatch){
+        const min=m.minute?` ${m.minute}'`:(m.status==='PAUSED'?' HT':'');
+        statusBadge=`<span class="sched-status live-badge">🔴 LIVE${min}</span>`;
+      }else{
+        const kt=m.utcDate?new Date(m.utcDate).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',timeZoneName:'short'}):'TBD';
+        statusBadge=`<span class="sched-status sched-time">${kt}</span>`;
+      }
+      const homeScore=isFin||isLiveMatch?(m.homeScore??''):'';
+      const awayScore=isFin||isLiveMatch?(m.awayScore??''):'';
+      const scoreStr=(homeScore!==''&&awayScore!=='')?`${homeScore} – ${awayScore}`:'vs';
+      const stageLbl=STAGE_LABELS[m.stage]||m.stage||'';
+      const grpLbl=m.group?` · Group ${m.group.replace('GROUP_','')}`:m.matchday?` · MD${m.matchday}`:'';
+      html+=`<div class="sched-match${isLiveMatch?' live':''}">
+        <div class="sched-team home">${m.homeTeam?ft(m.homeTeam):'TBD'}</div>
+        <div class="sched-center">
+          <div class="sched-score">${scoreStr}</div>
+          ${statusBadge}
+        </div>
+        <div class="sched-team away">${m.awayTeam?ft(m.awayTeam):'TBD'}</div>
+        <div class="sched-venue">${stageLbl}${grpLbl}${m.venue?' · '+esc(m.venue):''}</div>
+      </div>`;
+    }
+    html+=`</div></div>`;
+  }
+  if(data?.syncedAt){
+    html+=`<div style="margin-top:.75rem;font-size:.72rem;color:var(--muted);text-align:right">Last synced: ${new Date(data.syncedAt).toLocaleTimeString()}</div>`;
+  }
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════
@@ -1508,7 +1727,7 @@ function renderGroupsView(data,el){
       const gdStr=(entry.gd>=0?'+':'')+entry.gd;
       html+=`<tr>
         <td style="color:var(--muted)">${idx+1}</td>
-        <td>${esc(entry.team)}</td>
+        <td>${ft(entry.team)}</td>
         <td style="color:var(--muted)">${entry.played}</td>
         <td style="color:var(--muted)">${entry.won}</td>
         <td style="color:var(--muted)">${entry.draw}</td>
@@ -1548,6 +1767,20 @@ function genPid(){
 //  INIT
 // ═══════════════════════════════════════════════
 (async()=>{
+  // Render deadline banner on home page
+  const banner=document.getElementById('home-deadline-banner');
+  if(banner){
+    if(isLocked()){
+      banner.innerHTML=`<div class="deadline-banner locked">🔒 <strong>Entries are now locked.</strong> The submission deadline was June 12 at 6 PM EST. No new brackets can be submitted.</div>`;
+    }else{
+      const msLeft=DEADLINE.getTime()-Date.now();
+      const hoursLeft=Math.max(0,Math.floor(msLeft/3600000));
+      const minsLeft=Math.max(0,Math.floor((msLeft%3600000)/60000));
+      const timeStr=hoursLeft>0?`${hoursLeft}h ${minsLeft}m`:`${minsLeft} minutes`;
+      banner.innerHTML=`<div class="deadline-banner">⏰ <strong>Entries lock on June 12 at 6 PM EST</strong> — ${timeStr} remaining! Submit your bracket now.</div>`;
+    }
+  }
+
   if(S.pid){
     try{
       const {data:row}=await db.from('brackets').select('data').eq('pid',S.pid).maybeSingle();
