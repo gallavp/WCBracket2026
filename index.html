@@ -378,21 +378,26 @@ const SCORERS = ["Kylian Mbappé","Erling Haaland","Lionel Messi","Cristiano Ron
 // ═══════════════════════════════════════════════
 //  COUNTRY FLAGS
 // ═══════════════════════════════════════════════
-const FLAGS = {
-  "Mexico":"🇲🇽","South Korea":"🇰🇷","Czechia":"🇨🇿","South Africa":"🇿🇦",
-  "Canada":"🇨🇦","Switzerland":"🇨🇭","Bosnia-Herzegovina":"🇧🇦","Qatar":"🇶🇦",
-  "Morocco":"🇲🇦","Brazil":"🇧🇷","Scotland":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","Haiti":"🇭🇹",
-  "United States":"🇺🇸","Türkiye":"🇹🇷","Australia":"🇦🇺","Paraguay":"🇵🇾",
-  "Germany":"🇩🇪","Ivory Coast":"🇨🇮","Ecuador":"🇪🇨","Curaçao":"🇨🇼",
-  "Netherlands":"🇳🇱","Japan":"🇯🇵","Sweden":"🇸🇪","Tunisia":"🇹🇳",
-  "Belgium":"🇧🇪","Iran":"🇮🇷","Egypt":"🇪🇬","New Zealand":"🇳🇿",
-  "Spain":"🇪🇸","Saudi Arabia":"🇸🇦","Uruguay":"🇺🇾","Cape Verde":"🇨🇻",
-  "France":"🇫🇷","Senegal":"🇸🇳","Norway":"🇳🇴","Iraq":"🇮🇶",
-  "Argentina":"🇦🇷","Austria":"🇦🇹","Algeria":"🇩🇿","Jordan":"🇯🇴",
-  "Portugal":"🇵🇹","Colombia":"🇨🇴","DR Congo":"🇨🇩","Uzbekistan":"🇺🇿",
-  "England":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croatia":"🇭🇷","Panama":"🇵🇦","Ghana":"🇬🇭",
+const FLAG_CODES = {
+  "Mexico":"mx","South Korea":"kr","Czechia":"cz","South Africa":"za",
+  "Canada":"ca","Switzerland":"ch","Bosnia-Herzegovina":"ba","Qatar":"qa",
+  "Morocco":"ma","Brazil":"br","Scotland":"gb-sct","Haiti":"ht",
+  "United States":"us","Türkiye":"tr","Australia":"au","Paraguay":"py",
+  "Germany":"de","Ivory Coast":"ci","Ecuador":"ec","Curaçao":"cw",
+  "Netherlands":"nl","Japan":"jp","Sweden":"se","Tunisia":"tn",
+  "Belgium":"be","Iran":"ir","Egypt":"eg","New Zealand":"nz",
+  "Spain":"es","Saudi Arabia":"sa","Uruguay":"uy","Cape Verde":"cv",
+  "France":"fr","Senegal":"sn","Norway":"no","Iraq":"iq",
+  "Argentina":"ar","Austria":"at","Algeria":"dz","Jordan":"jo",
+  "Portugal":"pt","Colombia":"co","DR Congo":"cd","Uzbekistan":"uz",
+  "England":"gb-eng","Croatia":"hr","Panama":"pa","Ghana":"gh",
 };
-function ft(t){if(!t)return'';const f=FLAGS[t]||'';return f?`${f} ${esc(t)}`:esc(t);}
+function ft(t){
+  if(!t) return '';
+  const code=FLAG_CODES[t];
+  const img=code?`<img src="https://flagcdn.com/20x15/${code}.png" style="height:12px;vertical-align:middle;margin-right:4px;border-radius:1px;" alt="${esc(t)}">`:'';
+  return `${img}${esc(t)}`;
+}
 
 const STAGE_LABELS = {
   'GROUP_STAGE':'Group Stage','ROUND_OF_32':'Round of 32',
@@ -405,6 +410,18 @@ const STAGE_LABELS = {
 // ═══════════════════════════════════════════════
 const DEADLINE = new Date('2026-06-12T23:00:00Z');
 function isLocked(){ return Date.now() >= DEADLINE.getTime(); }
+
+// Pre-tournament estimated % chance of advancing to R32, based purely on FIFA rankings
+function preGroupAdvPct(team, group){
+  const teams=GROUPS[group];
+  const ranked=teams.map(t=>({
+    t,
+    ep:teams.filter(x=>x!==t).reduce((s,o)=>s+matchProb(t,o),0)
+  })).sort((a,b)=>b.ep-a.ep);
+  const rank=ranked.findIndex(x=>x.t===team);
+  // Top 2 auto-qualify; ~67% of 3rd-place teams advance as wild cards; 4th eliminated
+  return [82,65,28,8][rank]??8;
+}
 
 // ═══════════════════════════════════════════════
 //  FIFA WORLD RANKING POINTS (frozen at WC2026 draw — Jun 2026 estimates)
@@ -705,7 +722,7 @@ function stepGroups(from,to,num){
   const keys=GK.filter(k=>k>=from&&k<=to);
   const cards=keys.map(g=>{
     const t=GROUPS[g],p=S.b.groups[g]||{};
-    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${ft(n)}</option>`).join('');
+    const opts=pos=>t.map(n=>`<option value="${esc(n)}" ${p[pos]===n?'selected':''}>${esc(n)} (${preGroupAdvPct(n,g)}%)</option>`).join('');
     return`<div class="group-card"><h4>Group ${g}</h4>
       <div class="pick-row"><span class="pick-lbl"><span class="badge badge-gold">1st</span></span>
         <select data-g="${g}" data-pos="first"><option value="">— Pick winner —</option>${opts('first')}</select></div>
@@ -713,11 +730,15 @@ function stepGroups(from,to,num){
         <select data-g="${g}" data-pos="second"><option value="">— Pick runner-up —</option>${opts('second')}</select></div>
     </div>`;
   }).join('');
+  const legend=`<div style="font-size:.74rem;color:var(--muted);margin-top:.85rem;padding:.6rem .8rem;background:rgba(255,255,255,.03);border-radius:var(--radius);border:1px solid var(--border)">
+    📊 <strong style="color:var(--text)">% in dropdown</strong> = estimated probability of that team advancing to the Round of 32, based on pre-tournament FIFA World Rankings.
+    Top 2 in each group qualify automatically (~82% and ~65%); the best 8 of 12 third-place teams also advance (~28%).
+  </div>`;
   return`
     <div class="step-hd"><div class="step-num">Step ${num}/${STEPS.length}</div>
     <h2>Group Picks — Groups ${from}–${to}</h2>
     <p>Pick who finishes 1st and 2nd in each group.</p></div>
-    <div class="groups-grid">${cards}</div>${navBtns()}`;
+    <div class="groups-grid">${cards}</div>${legend}${navBtns()}`;
 }
 
 // ── Step 3: Best 3rd-Place ────────────────────
@@ -726,21 +747,32 @@ function stepThird(){
   const cards=GK.map(g=>{
     const p=S.b.groups[g]||{};
     const rem=GROUPS[g].filter(t=>t!==p.first&&t!==p.second);
-    const sel=S.b.thirdTeams[g]; // which team is selected (or undefined)
-    const b0=`<div class="third-team-btn${sel===rem[0]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[0]||'')}">${rem[0]?ft(rem[0]):'?'}</div>`;
-    const b1=rem[1]?`<div class="third-team-btn${sel===rem[1]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[1])}">${ft(rem[1])}</div>`:`<div></div>`;
+    const sel=S.b.thirdTeams[g];
+    // Relative strength: probability rem[0] beats rem[1]
+    const pct0=rem[0]&&rem[1]?matchProb(rem[0],rem[1]):50;
+    const pct1=rem[0]&&rem[1]?100-pct0:50;
+    const b0=`<div class="third-team-btn${sel===rem[0]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[0]||'')}">
+      ${rem[0]?ft(rem[0]):'?'}${rem[0]&&rem[1]?`<span style="font-size:.65rem;color:var(--muted);margin-left:.3rem">(${pct0}%)</span>`:''}
+    </div>`;
+    const b1=rem[1]?`<div class="third-team-btn${sel===rem[1]?' sel':''}" data-action="third-team" data-group="${g}" data-team="${esc(rem[1])}">
+      ${ft(rem[1])}<span style="font-size:.65rem;color:var(--muted);margin-left:.3rem">(${pct1}%)</span>
+    </div>`:`<div></div>`;
     return`<div class="third-group-card" id="tgc-${g}">
       <h4>Group ${g} — pick 3rd place</h4>
       <div class="third-team-btns">${b0}${b1}</div>
     </div>`;
   }).join('');
   const cnt=S.b.third.length;
+  const legend=`<div style="font-size:.74rem;color:var(--muted);margin-top:.85rem;padding:.6rem .8rem;background:rgba(255,255,255,.03);border-radius:var(--radius);border:1px solid var(--border)">
+    📊 <strong style="color:var(--text)">% on each button</strong> = relative probability of that team outperforming the other candidate for 3rd place, based on FIFA World Rankings.
+    Higher % = stronger team, more likely to finish 3rd rather than 4th in the group.
+  </div>`;
   return`
     <div class="step-hd"><div class="step-num">Step 4/${STEPS.length}</div>
     <h2>Best 3rd-Place Qualifiers</h2>
     <p>8 of the 12 third-place finishers advance. For each group, click the team you think finishes 3rd — your 8 picks will enter the bracket.</p></div>
     <div class="counter ${cnt===8?'ok':'warn'}" id="cnt-third"><span id="cnt-3rd-txt">${cnt}/8 groups selected</span></div>
-    <div class="third-group-grid">${cards}</div>${navBtns()}`;
+    <div class="third-group-grid">${cards}</div>${legend}${navBtns()}`;
 }
 
 // ═══════════════════════════════════════════════
@@ -752,7 +784,10 @@ function stepBracket(){
   let html=`
     <div class="step-hd"><div class="step-num">Step 5/${STEPS.length}</div>
     <h2>Knockout Bracket</h2>
-    <p>Click a team to advance them. Picks flow from your earlier selections.</p></div>
+    <p>Click a team to advance them. Picks flow from your earlier selections.</p>
+    <div style="font-size:.74rem;color:var(--muted);padding:.5rem .75rem;background:rgba(255,255,255,.03);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:.5rem">
+      📊 <strong style="color:var(--text)">% on each team</strong> = probability of that team winning that specific match, based on pre-tournament FIFA World Rankings. Higher % = stronger team.
+    </div></div>
     <div class="bracket-wrap">
       <div class="bracket-stage" style="width:${BWIDTH}px;height:${BTOTAL}px;">`;
 
@@ -1035,6 +1070,10 @@ document.addEventListener('click',e=>{
   if(e.target.id==='btn-save-results'){saveResults();return;}
   if(e.target.id==='btn-admin-logout'){S.isAdmin=false;initAdmin();return;}
   if(e.target.id==='btn-edit-again'){S.step=0;renderStep();return;}
+
+  // Handle data-view on dynamically created buttons (e.g. post-submit screen)
+  const dvBtn=e.target.closest('[data-view]');
+  if(dvBtn&&!dvBtn.classList.contains('nav-btn')){showView(dvBtn.dataset.view);return;}
 
   const chip=e.target.closest('[data-action]');
   if(!chip) return;
