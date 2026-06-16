@@ -244,6 +244,7 @@
     .gb-bar-inner{height:100%;background:var(--gold-dk);border-radius:4px;}
     .gb-pick-count{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;}
     .gb-row.gb-r1 .gb-pick-count{border-color:var(--gold-dk);color:var(--gold);}
+    .gb-goals-badge{background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.3);color:var(--green);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;white-space:nowrap;}
     @media(max-width:560px){.gb-photo-ring{width:54px;height:54px;}.gb-rank-num{width:1.5rem;font-size:1rem;}}
   </style>
 </head>
@@ -1919,42 +1920,72 @@ function renderGroupsView(data,el){
 //  GOLDEN BOOT
 // ═══════════════════════════════════════════════
 const SCORER_DATA = {
-  "Kylian Mbappé":     {team:"France",       code:"fr",     id:231747},
-  "Erling Haaland":    {team:"Norway",        code:"no",     id:239085},
-  "Lionel Messi":      {team:"Argentina",     code:"ar",     id:158023},
-  "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     id:20801 },
-  "Vinicius Jr.":      {team:"Brazil",        code:"br",     id:238794},
-  "Harry Kane":        {team:"England",       code:"gb-eng", id:202126},
-  "Bukayo Saka":       {team:"England",       code:"gb-eng", id:246669},
-  "Phil Foden":        {team:"England",       code:"gb-eng", id:237692},
-  "Lautaro Martínez":  {team:"Argentina",     code:"ar",     id:221571},
-  "Pedri":             {team:"Spain",         code:"es",     id:261599},
-  "Gavi":              {team:"Spain",         code:"es",     id:262749},
-  "Rodri":             {team:"Spain",         code:"es",     id:224334},
-  "Kai Havertz":       {team:"Germany",       code:"de",     id:242358},
-  "Romelu Lukaku":     {team:"Belgium",       code:"be",     id:192476},
-  "Jonathan David":    {team:"Canada",        code:"ca",     id:251335},
-  "Richarlison":       {team:"Brazil",        code:"br",     id:212198},
-  "Alphonso Davies":   {team:"Canada",        code:"ca",     id:246803},
-  "Hirving Lozano":    {team:"Mexico",        code:"mx",     id:215648},
-  "Raúl Jiménez":      {team:"Mexico",        code:"mx",     id:219499},
-  "Memphis Depay":     {team:"Netherlands",   code:"nl",     id:198010},
+  "Kylian Mbappé":     {team:"France",       code:"fr",     wiki:"Kylian_Mbappé"},
+  "Erling Haaland":    {team:"Norway",        code:"no",     wiki:"Erling_Haaland"},
+  "Lionel Messi":      {team:"Argentina",     code:"ar",     wiki:"Lionel_Messi"},
+  "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     wiki:"Cristiano_Ronaldo"},
+  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior"},
+  "Harry Kane":        {team:"England",       code:"gb-eng", wiki:"Harry_Kane"},
+  "Bukayo Saka":       {team:"England",       code:"gb-eng", wiki:"Bukayo_Saka"},
+  "Phil Foden":        {team:"England",       code:"gb-eng", wiki:"Phil_Foden"},
+  "Lautaro Martínez":  {team:"Argentina",     code:"ar",     wiki:"Lautaro_Martínez"},
+  "Pedri":             {team:"Spain",         code:"es",     wiki:"Pedri"},
+  "Gavi":              {team:"Spain",         code:"es",     wiki:"Gavi_(footballer,_born_2004)"},
+  "Rodri":             {team:"Spain",         code:"es",     wiki:"Rodri_(footballer)"},
+  "Kai Havertz":       {team:"Germany",       code:"de",     wiki:"Kai_Havertz"},
+  "Romelu Lukaku":     {team:"Belgium",       code:"be",     wiki:"Romelu_Lukaku"},
+  "Jonathan David":    {team:"Canada",        code:"ca",     wiki:"Jonathan_David_(footballer)"},
+  "Richarlison":       {team:"Brazil",        code:"br",     wiki:"Richarlison"},
+  "Alphonso Davies":   {team:"Canada",        code:"ca",     wiki:"Alphonso_Davies"},
+  "Hirving Lozano":    {team:"Mexico",        code:"mx",     wiki:"Hirving_Lozano"},
+  "Raúl Jiménez":      {team:"Mexico",        code:"mx",     wiki:"Raúl_Jiménez"},
+  "Memphis Depay":     {team:"Netherlands",   code:"nl",     wiki:"Memphis_Depay"},
 };
+
+function _gbNormName(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,' ').trim().replace(/\s+/g,' ');
+}
 
 async function loadGoldenBoot(){
   const el=document.getElementById('gb-content');
   if(!el) return;
   el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
   try{
-    const {data:rows=[],error}=await db.from('brackets').select('pid,data');
+    const [{data:rows=[],error}, liveData]=await Promise.all([
+      db.from('brackets').select('pid,data'),
+      fetchLiveResults().catch(()=>null),
+    ]);
     if(error) throw error;
-    renderGoldenBoot(rows,el);
+
+    // Determine which players were picked
+    const tally={};
+    rows.forEach(row=>{
+      const n=(row.data?.topScorer||'').trim();
+      if(n) tally[n]=(tally[n]||0)+1;
+    });
+    const pickedNames=Object.keys(tally);
+
+    // Fetch Wikipedia thumbnails in parallel for picked players
+    const photoMap={};
+    await Promise.allSettled(
+      pickedNames
+        .filter(n=>SCORER_DATA[n]?.wiki)
+        .map(async n=>{
+          try{
+            const r=await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(SCORER_DATA[n].wiki)}`);
+            const j=await r.json();
+            if(j.thumbnail?.source) photoMap[n]=j.thumbnail.source;
+          }catch(e){}
+        })
+    );
+
+    renderGoldenBoot(rows, el, photoMap, liveData);
   }catch(e){
     el.innerHTML=`<div class="alert alert-err">Error: ${esc(e.message)}</div>`;
   }
 }
 
-function renderGoldenBoot(rows,el){
+function renderGoldenBoot(rows, el, photoMap, liveData){
   const tally={};
   (rows||[]).forEach(row=>{
     const name=(row.data?.topScorer||'').trim();
@@ -1965,12 +1996,21 @@ function renderGoldenBoot(rows,el){
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
   const total=sorted.reduce((s,[,c])=>s+c,0);
   const maxCount=sorted[0]?.[1]||1;
-  const resultScorer=(_lbLastRes||{}).topScorer||'';
+  const resultScorer=(liveData||_lbLastRes||{}).topScorer||'';
+  const apiScorers=(liveData||_lbLastRes||{}).topScorers||[];
+
+  function getGoals(name){
+    const nk=_gbNormName(name);
+    const s=apiScorers.find(s=>_gbNormName(s.name)===nk);
+    return s!=null?s.goals:null;
+  }
 
   if(!sorted.length){
     el.innerHTML=`<div class="alert alert-info">No Golden Boot picks submitted yet.</div>`;
     return;
   }
+
+  const hasGoals=apiScorers.length>0;
 
   let html=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
     ${total} pick${total!==1?'s':''} across ${sorted.length} player${sorted.length!==1?'s':''} &nbsp;·&nbsp; Worth <strong style="color:var(--gold)">10 pts</strong> if correct</div>
@@ -1981,18 +2021,23 @@ function renderGoldenBoot(rows,el){
     const rkCls=rank===1?'gb-r1':rank===2?'gb-r2':rank===3?'gb-r3':'';
     const pct=Math.round((count/maxCount)*100);
     const info=SCORER_DATA[name];
-    const photoUrl=info?`https://cdn.sofifa.net/players/${info.id}/25_120.png`:'';
+    const photoUrl=(photoMap||{})[name]||'';
     const initials=name.split(' ').map(w=>w[0]||'').filter(Boolean).slice(0,2).join('').toUpperCase();
     const isCorrect=resultScorer&&name===resultScorer;
     const rankLabel=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    const goals=getGoals(name);
 
     const photoHtml=photoUrl
-      ?`<img class="gb-photo" src="${photoUrl}" alt="${esc(name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="gb-initials" style="display:none">${esc(initials)}</span>`
+      ?`<img class="gb-photo" src="${photoUrl}" alt="${esc(name)}">`
       :`<span class="gb-initials">${esc(initials)}</span>`;
 
     const teamHtml=info
       ?`<div class="gb-team-line"><span class="fi fi-${info.code}" style="border-radius:2px"></span>${esc(info.team)}</div>`
       :'';
+
+    const goalsHtml=goals!==null
+      ?`<div class="gb-goals-badge">⚽ ${goals} goal${goals!==1?'s':''}</div>`
+      :(hasGoals?`<div class="gb-goals-badge" style="opacity:.4">⚽ 0 goals</div>`:'');
 
     html+=`<div class="gb-row ${rkCls}">
       <div class="gb-rank-num ${rkCls}">${rankLabel}</div>
@@ -2002,7 +2047,10 @@ function renderGoldenBoot(rows,el){
         ${teamHtml}
         <div class="gb-bar-outer"><div class="gb-bar-inner" style="width:${pct}%"></div></div>
       </div>
-      <div class="gb-pick-count ${rank===1?'gb-r1':''}">${count}&nbsp;pick${count!==1?'s':''}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;flex-shrink:0">
+        ${goalsHtml}
+        <div class="gb-pick-count ${rank===1?'gb-r1':''}">${count}&nbsp;pick${count!==1?'s':''}</div>
+      </div>
     </div>`;
   });
 

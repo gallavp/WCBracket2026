@@ -43,9 +43,10 @@ module.exports = async function handler(req, res) {
   const BASE = 'https://api.football-data.org/v4/competitions/2000';
 
   try {
-    const [sRes, mRes] = await Promise.all([
+    const [sRes, mRes, scRes] = await Promise.all([
       fetch(`${BASE}/standings`, { headers }),
       fetch(`${BASE}/matches`,   { headers }),
+      fetch(`${BASE}/scorers`,   { headers }).catch(() => null),
     ]);
 
     if (!sRes.ok) return res.status(502).json({ error: `Standings API error ${sRes.status}` });
@@ -53,6 +54,7 @@ module.exports = async function handler(req, res) {
 
     const sd = await sRes.json();
     const md = await mRes.json();
+    const scData = (scRes && scRes.ok) ? await scRes.json().catch(() => null) : null;
 
     const result = {
       groups: {}, thirdPlace: [],
@@ -145,6 +147,13 @@ module.exports = async function handler(req, res) {
         }
       }
     }
+
+    result.topScorers = (scData?.scorers || []).map(s => ({
+      name:    s.player?.name || '',
+      team:    s.team?.name   || '',
+      goals:   s.goals        ?? 0,
+      assists: s.assists       ?? 0,
+    }));
 
     res.setHeader('Cache-Control', 's-maxage=300, stale-while-revalidate=60');
     res.json(result);
