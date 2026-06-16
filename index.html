@@ -1456,11 +1456,11 @@ function renderLeaderboardTable(brackets,res,resSource,el){
   let html=`<div class="card" style="padding:0;overflow:hidden"><table class="lb-table">
     <thead><tr>
       <th>#</th><th>Name</th>
-      <th style="text-align:right">Groups</th>
-      <th style="text-align:right">Knockout</th>
-      <th style="text-align:right">Bonus</th>
-      <th style="text-align:right">Total</th>
-      <th style="text-align:right;white-space:nowrap;color:#4fc3f7">Exp. Score</th>
+      <th style="text-align:center">Groups</th>
+      <th style="text-align:center">Knockout</th>
+      <th style="text-align:center">Bonus</th>
+      <th style="text-align:center">Total</th>
+      <th style="text-align:center;white-space:nowrap;color:#4fc3f7">Exp. Score</th>
       ${canView?'<th></th>':''}
     </tr></thead><tbody>`;
 
@@ -1469,16 +1469,23 @@ function renderLeaderboardTable(brackets,res,resSource,el){
     html+=`<tr ${me?'style="background:rgba(245,197,24,.06)"':''}>
       <td><span class="rank ${cls}">${rk}</span></td>
       <td style="font-weight:600">${esc(r.name)}${me?' ⭐':''}</td>
-      <td style="text-align:right;color:var(--muted)">${(r.sc.g||0)+(r.sc.th||0)}</td>
-      <td style="text-align:right;color:var(--muted)">${r.ko}</td>
-      <td style="text-align:right;color:var(--muted)">${r.sc.bon||0}</td>
-      <td style="text-align:right;font-weight:700;color:var(--gold)">${r.sc.total}</td>
-      <td style="text-align:right;font-style:italic;color:#4fc3f7">~${r.exp}</td>
+      <td style="text-align:center;color:var(--muted)">${(r.sc.g||0)+(r.sc.th||0)}</td>
+      <td style="text-align:center;color:var(--muted)">${r.ko}</td>
+      <td style="text-align:center;color:var(--muted)">${r.sc.bon||0}</td>
+      <td style="text-align:center;font-weight:700;color:var(--gold)">${r.sc.total}</td>
+      <td style="text-align:center;font-style:italic;color:#4fc3f7">~${r.exp}</td>
       ${canView?`<td><button class="view-btn" data-action="view-entry" data-eid="${esc(r.id)}">👁 View</button></td>`:''}
     </tr>`;
   });
 
-  html+=`</tbody></table></div>`;
+  html+=`</tbody></table></div>
+  <div style="margin-top:.75rem;padding:.6rem .85rem;background:rgba(79,195,247,.07);border-left:3px solid #4fc3f7;border-radius:4px;font-size:.78rem;color:var(--muted);line-height:1.55">
+    <span style="color:#4fc3f7;font-weight:600">~ Exp. Score</span> — projected final score if the tournament played out according to pre-tournament FIFA ranking probabilities.
+    Calculated as: <em>current locked points</em> + <em>expected future points</em> for every remaining pick.
+    For each unplayed match, the app estimates the probability that a participant's chosen team wins (using FIFA ranking strength) and multiplies it by the points that round is worth
+    (Group winner: 3 pts · Group runner-up: 2 pts · 3rd-place qualifier: 1 pt · R32: 2 · R16: 3 · QF: 5 · SF: 8 · Final: 13 · 3rd-place match: 3 · Golden Boot: 10).
+    This number updates in real time as match results come in.
+  </div>`;
 
   // Status footer
   const syncAge=_lbSyncedAt?Math.round((Date.now()-_lbSyncedAt)/60000):null;
