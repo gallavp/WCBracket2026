@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AVP World Cup 2026 — Raffle Draw</title>
+  <style>
+    :root {
+      --bg: #0d1117; --card: #161b22; --border: #30363d;
+      --gold: #f5c518; --gold-lt: #fde047; --gold-dk: #c99a15;
+      --text: #e6edf3; --muted: #8b949e; --green: #3fb950;
+      --red: #f85149; --radius: 8px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg); color: var(--text); min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: flex-start; padding: 2rem 1rem;
+    }
+
+    .logo-bar {
+      display: flex; align-items: center; gap: 1rem; margin-bottom: 2rem;
+    }
+    .logo-bar img { height: 48px; object-fit: contain; }
+
+    h1 {
+      font-size: 2rem; color: var(--gold); text-align: center;
+      margin-bottom: .25rem;
+    }
+    .subtitle {
+      color: var(--muted); text-align: center; margin-bottom: 2rem;
+      font-size: .95rem;
+    }
+
+    /* Drum / ticket pool */
+    .drum {
+      width: 100%; max-width: 600px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.5rem;
+    }
+    .drum-title {
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin-bottom: 1rem;
+    }
+    .ticket-grid {
+      display: flex; flex-wrap: wrap; gap: .5rem;
+    }
+    .ticket {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: .35rem .75rem;
+      font-size: .85rem; transition: all .3s;
+    }
+    .ticket.spinning {
+      border-color: var(--gold-dk); color: var(--gold);
+      animation: pulse .4s ease-in-out infinite alternate;
+    }
+    .ticket.eliminated {
+      opacity: .25; text-decoration: line-through; color: var(--muted);
+    }
+    .ticket.winner {
+      background: rgba(245,197,24,.15); border-color: var(--gold);
+      color: var(--gold); font-weight: 700;
+    }
+
+    @keyframes pulse {
+      from { transform: scale(1); background: rgba(245,197,24,.05); }
+      to   { transform: scale(1.08); background: rgba(245,197,24,.2); }
+    }
+
+    /* Spinner display */
+    .spinner-display {
+      width: 100%; max-width: 600px;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem;
+      text-align: center; margin-bottom: 1.5rem; min-height: 110px;
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center;
+    }
+    .spin-label {
+      font-size: .72rem; text-transform: uppercase; letter-spacing: .07em;
+      color: var(--muted); margin-bottom: .6rem;
+    }
+    .spin-name {
+      font-size: 2.2rem; font-weight: 800; color: var(--gold);
+      min-height: 2.8rem; transition: all .1s;
+    }
+    .spin-name.flash { animation: nameflash .15s ease; }
+
+    @keyframes nameflash {
+      0%   { opacity: 1; }
+      50%  { opacity: .2; }
+      100% { opacity: 1; }
+    }
+
+    /* Winner reveal */
+    .winner-reveal {
+      width: 100%; max-width: 600px;
+      background: linear-gradient(135deg, rgba(245,197,24,.12), rgba(245,197,24,.04));
+      border: 2px solid var(--gold); border-radius: var(--radius);
+      padding: 2rem 1.5rem; text-align: center; margin-bottom: 1.5rem;
+      display: none;
+    }
+    .winner-reveal.show { display: block; animation: revealIn .5s ease; }
+    @keyframes revealIn {
+      from { transform: scale(.9); opacity: 0; }
+      to   { transform: scale(1);  opacity: 1; }
+    }
+    .winner-trophy { font-size: 3rem; margin-bottom: .5rem; }
+    .winner-label { color: var(--muted); font-size: .9rem; margin-bottom: .4rem; }
+    .winner-name {
+      font-size: 2.8rem; font-weight: 900; color: var(--gold);
+      text-shadow: 0 0 30px rgba(245,197,24,.5);
+    }
+    .winner-tag {
+      margin-top: .75rem; font-size: .9rem; color: var(--muted);
+    }
+
+    /* Confetti canvas */
+    #confetti { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 999; }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex; align-items: center; gap: .4rem;
+      padding: .6rem 1.4rem; border-radius: var(--radius);
+      border: 1px solid; font-size: .95rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .btn-primary { background: var(--gold); color: #000; border-color: var(--gold); }
+    .btn-primary:hover { background: var(--gold-lt); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+    .btn-secondary { background: transparent; color: var(--text); border-color: var(--border); }
+    .btn-secondary:hover { background: var(--card); }
+
+    .controls { display: flex; gap: .75rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1.5rem; }
+
+    .status {
+      font-size: .82rem; color: var(--muted); text-align: center;
+      margin-bottom: .75rem;
+    }
+    .status.err { color: var(--red); }
+    .status.ok  { color: var(--green); }
+  </style>
+</head>
+<body>
+
+<canvas id="confetti"></canvas>
+
+<div class="logo-bar">
+  <img src="AVP_Logo_Blue_72dpi.png" alt="AVP">
+</div>
+
+<h1>🏆 Raffle Draw</h1>
+<p class="subtitle">AVP Group — World Cup 2026 Bracket Challenge</p>
+
+<div class="status" id="status">Loading entries…</div>
+
+<div class="drum">
+  <div class="drum-title">Entries in the drum (<span id="entry-count">0</span>)</div>
+  <div class="ticket-grid" id="ticket-grid"></div>
+</div>
+
+<div class="spinner-display">
+  <div class="spin-label">Drawing…</div>
+  <div class="spin-name" id="spin-name">—</div>
+</div>
+
+<div class="winner-reveal" id="winner-reveal">
+  <div class="winner-trophy">🏆</div>
+  <div class="winner-label">And the winner is…</div>
+  <div class="winner-name" id="winner-name"></div>
+  <div class="winner-tag">Congratulations! 🎉</div>
+</div>
+
+<div class="controls">
+  <button class="btn btn-primary" id="draw-btn" onclick="startDraw()" disabled>🎲 Draw Winner</button>
+  <button class="btn btn-secondary" id="reset-btn" onclick="resetRaffle()" style="display:none">↺ Reset</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://nzdnprmruyofplpjuzpk.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im56ZG5wcm1ydXlvZnBscGp1enBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyMDk3NzgsImV4cCI6MjA5Njc4NTc3OH0.z1wWMxZlLXwv2vMiztiP4goRG0cm2BYUCaPVSIvYq5Y';
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let entries = [];
+let drawing = false;
+
+async function loadEntries() {
+  const statusEl = document.getElementById('status');
+  try {
+    const { data: rows = [], error } = await db.from('brackets').select('pid,data');
+    if (error) throw error;
+
+    entries = rows
+      .map(r => ({ pid: r.pid, name: (r.data && r.data.name) ? r.data.name.trim() : null }))
+      .filter(e => e.name);
+
+    if (!entries.length) {
+      statusEl.textContent = 'No entries found.';
+      statusEl.className = 'status err';
+      return;
+    }
+
+    statusEl.textContent = `${entries.length} entries loaded — ready to draw!`;
+    statusEl.className = 'status ok';
+    document.getElementById('entry-count').textContent = entries.length;
+    renderTickets();
+    document.getElementById('draw-btn').disabled = false;
+  } catch (e) {
+    statusEl.textContent = 'Error loading entries: ' + e.message;
+    statusEl.className = 'status err';
+  }
+}
+
+function renderTickets(highlightIdx = -1, eliminatedBefore = -1) {
+  const grid = document.getElementById('ticket-grid');
+  grid.innerHTML = entries.map((e, i) => {
+    let cls = 'ticket';
+    if (i === highlightIdx) cls += ' spinning';
+    return `<div class="ticket" id="ticket-${i}">${esc(e.name)}</div>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function startDraw() {
+  if (drawing || !entries.length) return;
+  drawing = true;
+  document.getElementById('draw-btn').disabled = true;
+  document.getElementById('winner-reveal').classList.remove('show');
+  document.getElementById('reset-btn').style.display = 'none';
+
+  const spinEl = document.getElementById('spin-name');
+  const total = entries.length;
+
+  // Pick winner first (cryptographically fair shuffle pick)
+  const arr = new Uint32Array(1);
+  crypto.getRandomValues(arr);
+  const winnerIdx = arr[0] % total;
+
+  // Animate: rapidly cycle through names, slowing to winner
+  let step = 0;
+  const totalSteps = 40;
+  let currentIdx = 0;
+
+  function tick() {
+    // speed curve: fast start, slow end
+    const progress = step / totalSteps;
+    const delay = 60 + Math.pow(progress, 2) * 600;
+
+    // Cycle through names (not random — sequential for visual clarity)
+    currentIdx = (currentIdx + 1) % total;
+
+    // Last few steps steer toward the winner
+    if (step >= totalSteps - total) {
+      const remaining = totalSteps - step;
+      if (remaining <= 1) currentIdx = winnerIdx;
+    }
+
+    // Highlight current ticket
+    document.querySelectorAll('.ticket').forEach((el, i) => {
+      el.className = 'ticket' + (i === currentIdx ? ' spinning' : '');
+    });
+
+    spinEl.classList.add('flash');
+    spinEl.textContent = entries[currentIdx].name;
+    setTimeout(() => spinEl.classList.remove('flash'), 80);
+
+    step++;
+    if (step < totalSteps) {
+      setTimeout(tick, delay);
+    } else {
+      // Final: land on winner
+      currentIdx = winnerIdx;
+      document.querySelectorAll('.ticket').forEach((el, i) => {
+        el.className = 'ticket' + (i === winnerIdx ? ' winner' : ' eliminated');
+      });
+      spinEl.textContent = entries[winnerIdx].name;
+      revealWinner(entries[winnerIdx].name);
+    }
+  }
+
+  tick();
+}
+
+function revealWinner(name) {
+  const reveal = document.getElementById('winner-reveal');
+  document.getElementById('winner-name').textContent = name;
+  reveal.classList.add('show');
+  document.getElementById('reset-btn').style.display = '';
+  launchConfetti();
+  drawing = false;
+}
+
+function resetRaffle() {
+  document.getElementById('winner-reveal').classList.remove('show');
+  document.getElementById('reset-btn').style.display = 'none';
+  document.getElementById('draw-btn').disabled = false;
+  document.getElementById('spin-name').textContent = '—';
+  document.querySelectorAll('.ticket').forEach(el => el.className = 'ticket');
+  stopConfetti();
+}
+
+// ── Confetti ──────────────────────────────────────
+const canvas = document.getElementById('confetti');
+const ctx = canvas.getContext('2d');
+let particles = [], confettiRunning = false, confettiRaf;
+
+function launchConfetti() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  particles = Array.from({ length: 160 }, () => ({
+    x: Math.random() * canvas.width,
+    y: -20 - Math.random() * 100,
+    r: 5 + Math.random() * 6,
+    d: 2 + Math.random() * 4,
+    color: ['#f5c518','#fde047','#3fb950','#58a6ff','#f85149','#fff'][Math.floor(Math.random()*6)],
+    tilt: Math.random() * 20 - 10,
+    tiltAngle: 0,
+    tiltSpeed: 0.1 + Math.random() * 0.15,
+  }));
+  confettiRunning = true;
+  animateConfetti();
+}
+
+function animateConfetti() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let alive = false;
+  particles.forEach(p => {
+    p.tiltAngle += p.tiltSpeed;
+    p.y += p.d;
+    p.tilt = Math.sin(p.tiltAngle) * 12;
+    if (p.y < canvas.height + 20) alive = true;
+    ctx.beginPath();
+    ctx.lineWidth = p.r / 2;
+    ctx.strokeStyle = p.color;
+    ctx.moveTo(p.x + p.tilt + p.r / 4, p.y);
+    ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 4);
+    ctx.stroke();
+  });
+  if (alive && confettiRunning) confettiRaf = requestAnimationFrame(animateConfetti);
+  else ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function stopConfetti() {
+  confettiRunning = false;
+  cancelAnimationFrame(confettiRaf);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+window.addEventListener('resize', () => {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+});
+
+loadEntries();
+</script>
+</body>
+</html>

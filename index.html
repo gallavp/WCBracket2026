@@ -220,6 +220,31 @@
       .logo-ribbon{gap:1rem;}
       .logo-ribbon img{height:28px;}
     }
+
+    /* GOLDEN BOOT */
+    .gb-list{display:flex;flex-direction:column;gap:.65rem;}
+    .gb-row{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:.85rem 1rem;display:flex;align-items:center;gap:.9rem;transition:border-color .15s;}
+    .gb-row.gb-r1{border-color:var(--gold);background:rgba(245,197,24,.04);}
+    .gb-row.gb-r2{border-color:#9e9e9e;}
+    .gb-row.gb-r3{border-color:#cd7f32;}
+    .gb-rank-num{font-size:1.3rem;font-weight:900;color:var(--muted);width:2rem;text-align:center;flex-shrink:0;}
+    .gb-rank-num.gb-r1{color:var(--gold);}
+    .gb-rank-num.gb-r2{color:#b0b0b0;}
+    .gb-rank-num.gb-r3{color:#cd7f32;}
+    .gb-photo-ring{width:68px;height:68px;border-radius:50%;overflow:hidden;flex-shrink:0;border:2px solid var(--border);background:var(--card2);display:flex;align-items:center;justify-content:center;}
+    .gb-row.gb-r1 .gb-photo-ring{border-color:var(--gold);}
+    .gb-row.gb-r2 .gb-photo-ring{border-color:#9e9e9e;}
+    .gb-row.gb-r3 .gb-photo-ring{border-color:#cd7f32;}
+    .gb-photo{width:100%;height:100%;object-fit:cover;object-position:top center;}
+    .gb-initials{font-size:1.3rem;font-weight:900;color:var(--muted);}
+    .gb-meta{flex:1;min-width:0;}
+    .gb-player-name{font-size:1rem;font-weight:700;}
+    .gb-team-line{display:flex;align-items:center;gap:.35rem;color:var(--muted);font-size:.8rem;margin-top:.15rem;}
+    .gb-bar-outer{margin-top:.5rem;background:var(--bg);border-radius:4px;height:4px;overflow:hidden;}
+    .gb-bar-inner{height:100%;background:var(--gold-dk);border-radius:4px;}
+    .gb-pick-count{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;}
+    .gb-row.gb-r1 .gb-pick-count{border-color:var(--gold-dk);color:var(--gold);}
+    @media(max-width:560px){.gb-photo-ring{width:54px;height:54px;}.gb-rank-num{width:1.5rem;font-size:1rem;}}
   </style>
 </head>
 <body>
@@ -231,6 +256,7 @@
   <button class="nav-btn" data-view="groups">Groups</button>
   <button class="nav-btn" data-view="schedule">Schedule</button>
   <button class="nav-btn" data-view="leaderboard">Leaderboard</button>
+  <button class="nav-btn" data-view="golden-boot">🥾 Golden Boot</button>
   <button class="nav-btn" data-view="admin">Admin</button>
 </nav>
 <div class="logo-ribbon">
@@ -321,6 +347,17 @@
       <button class="btn btn-secondary" id="lb-refresh" style="font-size:.78rem;padding:.3rem .65rem">↻ Refresh</button>
     </div>
     <div id="lb-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
+  </div>
+</div>
+
+<!-- GOLDEN BOOT -->
+<div id="view-golden-boot" class="view">
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+      <h2 style="font-size:1.3rem">🥾 Golden Boot Picks</h2>
+      <button class="btn btn-secondary" id="gb-refresh" style="font-size:.78rem;padding:.3rem .65rem">↻ Refresh</button>
+    </div>
+    <div id="gb-content"><div class="loading"><div class="spinner"></div>Loading…</div></div>
   </div>
 </div>
 
@@ -611,6 +648,7 @@ document.querySelectorAll('[data-view]').forEach(el=>{
 document.getElementById('lb-refresh').addEventListener('click',loadLeaderboard);
 document.getElementById('grp-refresh').addEventListener('click',()=>{_liveRes=null;_liveResTS=0;loadGroups();});
 document.getElementById('sched-refresh').addEventListener('click',()=>{_liveRes=null;_liveResTS=0;loadSchedule();});
+document.getElementById('gb-refresh').addEventListener('click',loadGoldenBoot);
 document.getElementById('modal-close').addEventListener('click',hideEntryModal);
 document.getElementById('entry-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('entry-modal')) hideEntryModal();
@@ -635,6 +673,7 @@ function showView(v){
   if(v==='admin')       initAdmin();
   if(v==='groups')      loadGroups();
   if(v==='schedule')    loadSchedule();
+  if(v==='golden-boot') loadGoldenBoot();
 }
 
 // ═══════════════════════════════════════════════
@@ -1873,6 +1912,101 @@ function renderGroupsView(data,el){
     html+=`<div style="margin-top:.75rem;font-size:.72rem;color:var(--muted);text-align:right">
       Last synced: ${new Date(data.syncedAt).toLocaleTimeString()} · auto-refreshes with leaderboard</div>`;
   }
+  el.innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════
+//  GOLDEN BOOT
+// ═══════════════════════════════════════════════
+const SCORER_DATA = {
+  "Kylian Mbappé":     {team:"France",       code:"fr",     id:231747},
+  "Erling Haaland":    {team:"Norway",        code:"no",     id:239085},
+  "Lionel Messi":      {team:"Argentina",     code:"ar",     id:158023},
+  "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     id:20801 },
+  "Vinicius Jr.":      {team:"Brazil",        code:"br",     id:238794},
+  "Harry Kane":        {team:"England",       code:"gb-eng", id:202126},
+  "Bukayo Saka":       {team:"England",       code:"gb-eng", id:246669},
+  "Phil Foden":        {team:"England",       code:"gb-eng", id:237692},
+  "Lautaro Martínez":  {team:"Argentina",     code:"ar",     id:221571},
+  "Pedri":             {team:"Spain",         code:"es",     id:261599},
+  "Gavi":              {team:"Spain",         code:"es",     id:262749},
+  "Rodri":             {team:"Spain",         code:"es",     id:224334},
+  "Kai Havertz":       {team:"Germany",       code:"de",     id:242358},
+  "Romelu Lukaku":     {team:"Belgium",       code:"be",     id:192476},
+  "Jonathan David":    {team:"Canada",        code:"ca",     id:251335},
+  "Richarlison":       {team:"Brazil",        code:"br",     id:212198},
+  "Alphonso Davies":   {team:"Canada",        code:"ca",     id:246803},
+  "Hirving Lozano":    {team:"Mexico",        code:"mx",     id:215648},
+  "Raúl Jiménez":      {team:"Mexico",        code:"mx",     id:219499},
+  "Memphis Depay":     {team:"Netherlands",   code:"nl",     id:198010},
+};
+
+async function loadGoldenBoot(){
+  const el=document.getElementById('gb-content');
+  if(!el) return;
+  el.innerHTML=`<div class="loading"><div class="spinner"></div>Loading…</div>`;
+  try{
+    const {data:rows=[],error}=await db.from('brackets').select('pid,data');
+    if(error) throw error;
+    renderGoldenBoot(rows,el);
+  }catch(e){
+    el.innerHTML=`<div class="alert alert-err">Error: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderGoldenBoot(rows,el){
+  const tally={};
+  (rows||[]).forEach(row=>{
+    const name=(row.data?.topScorer||'').trim();
+    if(!name) return;
+    tally[name]=(tally[name]||0)+1;
+  });
+
+  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
+  const total=sorted.reduce((s,[,c])=>s+c,0);
+  const maxCount=sorted[0]?.[1]||1;
+  const resultScorer=(_lbLastRes||{}).topScorer||'';
+
+  if(!sorted.length){
+    el.innerHTML=`<div class="alert alert-info">No Golden Boot picks submitted yet.</div>`;
+    return;
+  }
+
+  let html=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
+    ${total} pick${total!==1?'s':''} across ${sorted.length} player${sorted.length!==1?'s':''} &nbsp;·&nbsp; Worth <strong style="color:var(--gold)">10 pts</strong> if correct</div>
+  <div class="gb-list">`;
+
+  sorted.forEach(([name,count],idx)=>{
+    const rank=idx+1;
+    const rkCls=rank===1?'gb-r1':rank===2?'gb-r2':rank===3?'gb-r3':'';
+    const pct=Math.round((count/maxCount)*100);
+    const info=SCORER_DATA[name];
+    const photoUrl=info?`https://cdn.sofifa.net/players/${info.id}/25_120.png`:'';
+    const initials=name.split(' ').map(w=>w[0]||'').filter(Boolean).slice(0,2).join('').toUpperCase();
+    const isCorrect=resultScorer&&name===resultScorer;
+    const rankLabel=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+
+    const photoHtml=photoUrl
+      ?`<img class="gb-photo" src="${photoUrl}" alt="${esc(name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><span class="gb-initials" style="display:none">${esc(initials)}</span>`
+      :`<span class="gb-initials">${esc(initials)}</span>`;
+
+    const teamHtml=info
+      ?`<div class="gb-team-line"><span class="fi fi-${info.code}" style="border-radius:2px"></span>${esc(info.team)}</div>`
+      :'';
+
+    html+=`<div class="gb-row ${rkCls}">
+      <div class="gb-rank-num ${rkCls}">${rankLabel}</div>
+      <div class="gb-photo-ring">${photoHtml}</div>
+      <div class="gb-meta">
+        <div class="gb-player-name">${esc(name)}${isCorrect?' <span style="color:var(--gold);font-size:.85rem">★ Golden Boot</span>':''}</div>
+        ${teamHtml}
+        <div class="gb-bar-outer"><div class="gb-bar-inner" style="width:${pct}%"></div></div>
+      </div>
+      <div class="gb-pick-count ${rank===1?'gb-r1':''}">${count}&nbsp;pick${count!==1?'s':''}</div>
+    </div>`;
+  });
+
+  html+=`</div>`;
   el.innerHTML=html;
 }
 
