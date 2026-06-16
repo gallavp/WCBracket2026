@@ -2020,7 +2020,12 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
 
   const hasGoals=apiScorers.length>0;
 
-  let html=`<div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
+  // DEBUG: show raw API scorer names — remove once name matching is confirmed
+  const debugHtml=hasGoals
+    ?`<details style="margin-bottom:1rem;font-size:.75rem;color:var(--muted)"><summary style="cursor:pointer">🔧 Debug: raw API scorer names (${apiScorers.length})</summary><pre style="margin-top:.5rem;background:var(--bg);padding:.75rem;border-radius:6px;overflow:auto">${esc(apiScorers.map(s=>`${s.goals}g  ${s.name}`).join('\n'))}</pre></details>`
+    :`<div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem">⚠️ No topScorers in API response</div>`;
+
+  let html=`${debugHtml}<div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
     ${total} pick${total!==1?'s':''} across ${sorted.length} player${sorted.length!==1?'s':''} &nbsp;·&nbsp; Worth <strong style="color:var(--gold)">10 pts</strong> if correct</div>
   <div class="gb-list">`;
 
