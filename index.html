@@ -1943,7 +1943,7 @@ const SCORER_DATA = {
 };
 
 function _gbNormName(s){
-  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,' ').trim().replace(/\s+/g,' ');
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]/g,' ').trim().replace(/\s+/g,' ').replace(/\bjr\b/,'junior');
 }
 
 async function loadGoldenBoot(){
