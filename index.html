@@ -1924,7 +1924,7 @@ const SCORER_DATA = {
   "Erling Haaland":    {team:"Norway",        code:"no",     wiki:"Erling_Haaland"},
   "Lionel Messi":      {team:"Argentina",     code:"ar",     wiki:"Lionel_Messi"},
   "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     wiki:"Cristiano_Ronaldo"},
-  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior"},
+  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior",    apiName:"Vinícius Júnior"},
   "Harry Kane":        {team:"England",       code:"gb-eng", wiki:"Harry_Kane"},
   "Bukayo Saka":       {team:"England",       code:"gb-eng", wiki:"Bukayo_Saka"},
   "Phil Foden":        {team:"England",       code:"gb-eng", wiki:"Phil_Foden"},
@@ -2000,6 +2000,13 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
   const apiScorers=(liveData||_lbLastRes||{}).topScorers||[];
 
   function getGoals(name){
+    const info=SCORER_DATA[name];
+    // Exact match via explicit apiName override (for display names that differ from API names)
+    if(info?.apiName){
+      const s=apiScorers.find(s=>s.name===info.apiName);
+      if(s!=null) return s.goals;
+    }
+    // Fallback: normalized match
     const nk=_gbNormName(name);
     const s=apiScorers.find(s=>_gbNormName(s.name)===nk);
     return s!=null?s.goals:null;
