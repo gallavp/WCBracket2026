@@ -1323,6 +1323,63 @@ async function fetchLiveResults(){
 // ═══════════════════════════════════════════════
 //  LEADERBOARD
 // ═══════════════════════════════════════════════
+
+// P(team finishes 1st or 2nd in group) based on relative FIFA-ranking strength
+function groupPickProb(team,group,pos){
+  const teams=GROUPS[group];
+  const ranked=teams.map(t=>({
+    t,ep:teams.filter(x=>x!==t).reduce((s,o)=>s+matchProb(t,o),0)
+  })).sort((a,b)=>b.ep-a.ep);
+  const rank=ranked.findIndex(x=>x.t===team);
+  const p1=[0.50,0.27,0.14,0.09][rank]??0.09;
+  const p2=[0.25,0.35,0.24,0.16][rank]??0.16;
+  return pos==='first'?p1:p2;
+}
+
+// Locked points (scoreIt) + expected future points across all remaining picks
+function expectedFinalScore(bkt,res){
+  const sc=scoreIt(bkt,res);
+  let exp=sc.total;
+  const r=res||{};
+  const t3map=resolveThirdForBkt(bkt);
+
+  // Group stage: expected pts for groups not yet finalised
+  for(const g of GK){
+    const rg=r.groups?.[g]||{};
+    const bg=bkt.groups?.[g]||{};
+    if(!rg.first&&bg.first)  exp+=groupPickProb(bg.first, g,'first') *3;
+    if(!rg.second&&bg.second) exp+=groupPickProb(bg.second,g,'second')*2;
+  }
+
+  // 3rd-place qualifiers: 8 of 12 groups advance (~66.7% chance each)
+  if(!(r.thirdPlace?.length>=8)){
+    for(const g of (bkt.third||[])){
+      if(!r.thirdPlace?.includes(g)) exp+=0.667;
+    }
+  }
+
+  // Knockout stage: expected pts for unplayed matches
+  const ptsByRound={r32:2,r16:3,qf:5,sf:8,final:13,third:3};
+  const roundResMap={
+    r32:r.r32||[], r16:r.r16||[], qf:r.qf||[], sf:r.sf||[],
+    final:r.champion?[r.champion]:[], third:r.thirdPlaceWinner?[r.thirdPlaceWinner]:[]
+  };
+  for(const [id,m] of Object.entries(BD)){
+    const mid=parseInt(id);
+    const pick=bkt.wins?.[mid]; if(!pick) continue;
+    const roundRes=roundResMap[m.r]||[];
+    if(roundRes.includes(pick)) continue; // already scored by scoreIt
+    const t1=getTeamForBkt(mid,1,bkt,t3map);
+    const t2=getTeamForBkt(mid,2,bkt,t3map);
+    if(!t1||!t2) continue;
+    if(roundRes.includes(t1)||roundRes.includes(t2)) continue; // match done, pick lost
+    const opp=pick===t1?t2:t1;
+    exp+=(matchProb(pick,opp)/100)*(ptsByRound[m.r]||0);
+  }
+
+  return Math.round(exp);
+}
+
 async function loadLeaderboard(){
   if(_lbUnsub){_lbUnsub();_lbUnsub=null;}
   if(_lbRefreshTimer){clearInterval(_lbRefreshTimer);_lbRefreshTimer=null;}
@@ -1384,7 +1441,8 @@ function renderLeaderboardTable(brackets,res,resSource,el){
     _lbEntries[row.pid]=d;
     const sc=scoreIt(d,res);
     const ko=(sc.r32||0)+(sc.r16||0)+(sc.qf||0)+(sc.sf||0)+(sc.tm||0)+(sc.ch||0);
-    rows.push({id:row.pid,name:d.name||'?',sc,ko});
+    const exp=expectedFinalScore(d,res);
+    rows.push({id:row.pid,name:d.name||'?',sc,ko,exp});
   });
   rows.sort((a,b)=>b.sc.total-a.sc.total);
 
@@ -1402,6 +1460,7 @@ function renderLeaderboardTable(brackets,res,resSource,el){
       <th style="text-align:right">Knockout</th>
       <th style="text-align:right">Bonus</th>
       <th style="text-align:right">Total</th>
+      <th style="text-align:right;white-space:nowrap;color:#4fc3f7">Exp. Score</th>
       ${canView?'<th></th>':''}
     </tr></thead><tbody>`;
 
@@ -1414,6 +1473,7 @@ function renderLeaderboardTable(brackets,res,resSource,el){
       <td style="text-align:right;color:var(--muted)">${r.ko}</td>
       <td style="text-align:right;color:var(--muted)">${r.sc.bon||0}</td>
       <td style="text-align:right;font-weight:700;color:var(--gold)">${r.sc.total}</td>
+      <td style="text-align:right;font-style:italic;color:#4fc3f7">~${r.exp}</td>
       ${canView?`<td><button class="view-btn" data-action="view-entry" data-eid="${esc(r.id)}">👁 View</button></td>`:''}
     </tr>`;
   });
