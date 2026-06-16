@@ -1924,7 +1924,7 @@ const SCORER_DATA = {
   "Erling Haaland":    {team:"Norway",        code:"no",     wiki:"Erling_Haaland"},
   "Lionel Messi":      {team:"Argentina",     code:"ar",     wiki:"Lionel_Messi"},
   "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     wiki:"Cristiano_Ronaldo"},
-  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior",    apiName:"Vinícius Júnior"},
+  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior",    apiNames:["Vinícius Júnior","Vinicius Junior","Vini Jr.","Vini Jr","Vinicius Jr.","Vini"]},
   "Harry Kane":        {team:"England",       code:"gb-eng", wiki:"Harry_Kane"},
   "Bukayo Saka":       {team:"England",       code:"gb-eng", wiki:"Bukayo_Saka"},
   "Phil Foden":        {team:"England",       code:"gb-eng", wiki:"Phil_Foden"},
@@ -2001,9 +2001,10 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
 
   function getGoals(name){
     const info=SCORER_DATA[name];
-    // Exact match via explicit apiName override (for display names that differ from API names)
-    if(info?.apiName){
-      const s=apiScorers.find(s=>s.name===info.apiName);
+    // Try each explicit API name variant (handles kit names, abbreviations, accents)
+    const overrides=info?.apiNames||(info?.apiName?[info.apiName]:[]);
+    for(const an of overrides){
+      const s=apiScorers.find(s=>s.name===an);
       if(s!=null) return s.goals;
     }
     // Fallback: normalized match
