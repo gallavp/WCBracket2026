@@ -1924,7 +1924,7 @@ const SCORER_DATA = {
   "Erling Haaland":    {team:"Norway",        code:"no",     wiki:"Erling_Haaland"},
   "Lionel Messi":      {team:"Argentina",     code:"ar",     wiki:"Lionel_Messi"},
   "Cristiano Ronaldo": {team:"Portugal",      code:"pt",     wiki:"Cristiano_Ronaldo"},
-  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior",    apiNames:["Vinícius Júnior","Vinicius Junior","Vini Jr.","Vini Jr","Vinicius Jr.","Vini"]},
+  "Vinicius Jr.":      {team:"Brazil",        code:"br",     wiki:"Vinicius_Júnior",    apiNames:["Vinícius Júnior","Vinícius Jr.","Vinicius Junior","Vini Jr.","Vini Jr","Vinicius Jr.","Vini","Vinícius"]},
   "Harry Kane":        {team:"England",       code:"gb-eng", wiki:"Harry_Kane"},
   "Bukayo Saka":       {team:"England",       code:"gb-eng", wiki:"Bukayo_Saka"},
   "Phil Foden":        {team:"England",       code:"gb-eng", wiki:"Phil_Foden"},
@@ -2001,16 +2001,29 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
 
   function getGoals(name){
     const info=SCORER_DATA[name];
-    // Try each explicit API name variant (handles kit names, abbreviations, accents)
     const overrides=info?.apiNames||(info?.apiName?[info.apiName]:[]);
+    // Exact match — normalize both sides to handle NFC/NFD differences
     for(const an of overrides){
-      const s=apiScorers.find(s=>s.name===an);
+      const s=apiScorers.find(s=>s.name.normalize()===an.normalize());
       if(s!=null) return s.goals;
     }
-    // Fallback: normalized match
+    // Fallback: accent-stripped normalized match
     const nk=_gbNormName(name);
     const s=apiScorers.find(s=>_gbNormName(s.name)===nk);
     return s!=null?s.goals:null;
+  }
+
+  function getGoalsTrace(name){
+    const info=SCORER_DATA[name];
+    const overrides=info?.apiNames||(info?.apiName?[info.apiName]:[]);
+    for(const an of overrides){
+      const s=apiScorers.find(s=>s.name.normalize()===an.normalize());
+      if(s!=null) return {goals:s.goals,matchedAs:s.name,method:'exact'};
+    }
+    const nk=_gbNormName(name);
+    const s=apiScorers.find(s=>_gbNormName(s.name)===nk);
+    if(s!=null) return {goals:s.goals,matchedAs:s.name,method:'normalized'};
+    return null;
   }
 
   if(!sorted.length){
@@ -2020,10 +2033,24 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
 
   const hasGoals=apiScorers.length>0;
 
-  // DEBUG: show raw API scorer names — remove once name matching is confirmed
+  // DEBUG panel — shows raw API names + per-player match trace
+  const pickedWithOverrides=Object.keys(tally).filter(n=>SCORER_DATA[n]?.apiNames);
+  const traceRows=pickedWithOverrides.map(n=>{
+    const t=getGoalsTrace(n);
+    const info=SCORER_DATA[n];
+    const tried=(info?.apiNames||[]).concat([`[norm] ${_gbNormName(n)}`]).join(', ');
+    return t
+      ?`<tr><td style="padding:2px 8px 2px 0;color:#4fc3f7">${esc(n)}</td><td style="padding:2px 8px;color:var(--green)">✅ "${esc(t.matchedAs)}" (${t.method}) → ${t.goals}g</td></tr>`
+      :`<tr><td style="padding:2px 8px 2px 0;color:#4fc3f7">${esc(n)}</td><td style="padding:2px 8px;color:#ef5350">❌ NOT MATCHED — tried: ${esc(tried)}</td></tr>`;
+  });
   const debugHtml=hasGoals
-    ?`<details style="margin-bottom:1rem;font-size:.75rem;color:var(--muted)"><summary style="cursor:pointer">🔧 Debug: raw API scorer names (${apiScorers.length})</summary><pre style="margin-top:.5rem;background:var(--bg);padding:.75rem;border-radius:6px;overflow:auto">${esc(apiScorers.map(s=>`${s.goals}g  ${s.name}`).join('\n'))}</pre></details>`
-    :`<div style="font-size:.75rem;color:var(--muted);margin-bottom:.5rem">⚠️ No topScorers in API response</div>`;
+    ?`<details open style="margin-bottom:1rem;font-size:.75rem;color:var(--muted);background:var(--bg);border:1px solid #333;border-radius:6px;padding:.6rem .85rem">
+        <summary style="cursor:pointer;font-weight:600;color:var(--muted)">🔧 Debug — Goal Lookup (${apiScorers.length} scorers in API)</summary>
+        ${traceRows.length?`<table style="margin:.5rem 0;border-collapse:collapse">${traceRows.join('')}</table>`:''}
+        <details style="margin-top:.5rem"><summary style="cursor:pointer">Raw API scorer list</summary>
+        <pre style="margin-top:.4rem;background:#111;padding:.6rem;border-radius:4px;overflow:auto;max-height:200px">${esc(apiScorers.map(s=>`${String(s.goals).padStart(2)}g  ${s.name}`).join('\n'))}</pre></details>
+      </details>`
+    :`<div style="font-size:.75rem;color:#ef5350;margin-bottom:.75rem;padding:.5rem .75rem;background:rgba(239,83,80,.08);border-left:3px solid #ef5350;border-radius:4px">⚠️ No scorer data in API response — <code>/scorers</code> endpoint returned empty or failed</div>`;
 
   let html=`${debugHtml}<div style="font-size:.82rem;color:var(--muted);margin-bottom:1rem">
     ${total} pick${total!==1?'s':''} across ${sorted.length} player${sorted.length!==1?'s':''} &nbsp;·&nbsp; Worth <strong style="color:var(--gold)">10 pts</strong> if correct</div>
