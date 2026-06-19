@@ -46,7 +46,7 @@ module.exports = async function handler(req, res) {
     const [sRes, mRes, scRes] = await Promise.all([
       fetch(`${BASE}/standings`, { headers }),
       fetch(`${BASE}/matches`,   { headers }),
-      fetch(`${BASE}/scorers`,   { headers }).catch(() => null),
+      fetch(`${BASE}/scorers?limit=50`, { headers }).catch(() => null),
     ]);
 
     if (!sRes.ok) return res.status(502).json({ error: `Standings API error ${sRes.status}` });
