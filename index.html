@@ -242,9 +242,16 @@
     .gb-team-line{display:flex;align-items:center;gap:.35rem;color:var(--muted);font-size:.8rem;margin-top:.15rem;}
     .gb-bar-outer{margin-top:.5rem;background:var(--bg);border-radius:4px;height:4px;overflow:hidden;}
     .gb-bar-inner{height:100%;background:var(--gold-dk);border-radius:4px;}
-    .gb-pick-count{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;color:var(--muted);white-space:nowrap;flex-shrink:0;}
-    .gb-row.gb-r1 .gb-pick-count{border-color:var(--gold-dk);color:var(--gold);}
     .gb-goals-badge{background:rgba(63,185,80,.15);border:1px solid rgba(63,185,80,.3);color:var(--green);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;white-space:nowrap;}
+    .gb-pickers{background:var(--card2);border:1px solid var(--border);border-radius:20px;padding:.2rem .65rem;font-size:.8rem;font-weight:700;color:var(--muted);cursor:pointer;transition:border-radius .15s;text-align:right;}
+    .gb-pickers[open]{border-radius:10px;}
+    .gb-pickers.gb-r1{border-color:var(--gold-dk);color:var(--gold);}
+    .gb-pickers summary{list-style:none;display:flex;align-items:center;gap:.3rem;white-space:nowrap;justify-content:flex-end;}
+    .gb-pickers summary::-webkit-details-marker{display:none;}
+    .gb-arr{font-size:.6rem;opacity:.6;display:inline-block;transition:transform .15s;}
+    .gb-pickers[open] .gb-arr{transform:rotate(180deg);}
+    .gb-pickers-list{display:flex;flex-direction:column;gap:.22rem;margin-top:.45rem;align-items:flex-end;}
+    .gb-picker-tag{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:5px;padding:.15rem .55rem;font-size:.73rem;font-weight:500;color:var(--text);white-space:nowrap;}
     @media(max-width:560px){.gb-photo-ring{width:54px;height:54px;}.gb-rank-num{width:1.5rem;font-size:1rem;}}
   </style>
 </head>
@@ -1986,11 +1993,13 @@ async function loadGoldenBoot(){
 }
 
 function renderGoldenBoot(rows, el, photoMap, liveData){
-  const tally={};
+  const tally={}, pickerMap={};
   (rows||[]).forEach(row=>{
     const name=(row.data?.topScorer||'').trim();
     if(!name) return;
     tally[name]=(tally[name]||0)+1;
+    if(!pickerMap[name]) pickerMap[name]=[];
+    pickerMap[name].push(row.data?.name||'?');
   });
 
   const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
@@ -2089,7 +2098,10 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
       </div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.35rem;flex-shrink:0">
         ${goalsHtml}
-        <div class="gb-pick-count ${rank===1?'gb-r1':''}">${count}&nbsp;pick${count!==1?'s':''}</div>
+        <details class="gb-pickers ${rank===1?'gb-r1':''}">
+          <summary>${count}&nbsp;pick${count!==1?'s':''}&nbsp;<span class="gb-arr">▾</span></summary>
+          <div class="gb-pickers-list">${(pickerMap[name]||[]).map(n=>`<span class="gb-picker-tag">${esc(n)}</span>`).join('')}</div>
+        </details>
       </div>
     </div>`;
   });
