@@ -2004,9 +2004,6 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
     pickerMap[name].push(row.data?.name||'?');
   });
 
-  const sorted=Object.entries(tally).sort((a,b)=>b[1]-a[1]);
-  const total=sorted.reduce((s,[,c])=>s+c,0);
-  const maxCount=sorted[0]?.[1]||1;
   const resultScorer=(liveData||_lbLastRes||{}).topScorer||'';
   const apiScorers=(liveData||_lbLastRes||{}).topScorers||[];
 
@@ -2036,6 +2033,15 @@ function renderGoldenBoot(rows, el, photoMap, liveData){
     if(s!=null) return {goals:s.goals,matchedAs:s.name,method:'normalized'};
     return null;
   }
+
+  // Sort by goals desc, then by picks desc as tiebreaker
+  const sorted=Object.entries(tally).sort((a,b)=>{
+    const ga=getGoals(a[0])??-1, gb=getGoals(b[0])??-1;
+    if(gb!==ga) return gb-ga;
+    return b[1]-a[1];
+  });
+  const total=sorted.reduce((s,[,c])=>s+c,0);
+  const maxCount=sorted[0]?.[1]||1;
 
   if(!sorted.length){
     el.innerHTML=`<div class="alert alert-info">No Golden Boot picks submitted yet.</div>`;
