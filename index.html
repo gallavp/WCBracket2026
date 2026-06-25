@@ -288,6 +288,15 @@
       </div>
     </div>
     <div id="home-deadline-banner"></div>
+    <div class="card" style="margin-top:1rem">
+      <div class="card-title">Already submitted from another device?</div>
+      <p style="font-size:.85rem;color:var(--muted);margin-bottom:.75rem">Enter the name you used when submitting your bracket to restore your session.</p>
+      <div style="display:flex;gap:.5rem;flex-wrap:wrap">
+        <input type="text" id="lookup-name" placeholder="Your name as submitted" style="flex:1;min-width:180px">
+        <button class="btn btn-secondary" data-action="lookup-bracket" style="white-space:nowrap">🔍 Find My Bracket</button>
+      </div>
+      <div id="lookup-result" style="margin-top:.65rem"></div>
+    </div>
     <div class="card">
       <div class="card-title">How to Score Points</div>
       <div class="pts-grid">
@@ -661,7 +670,10 @@ document.getElementById('modal-close').addEventListener('click',hideEntryModal);
 document.getElementById('entry-modal').addEventListener('click',e=>{
   if(e.target===document.getElementById('entry-modal')) hideEntryModal();
 });
-document.addEventListener('keydown',e=>{if(e.key==='Escape') hideEntryModal();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') hideEntryModal();
+  if(e.key==='Enter'&&e.target.id==='lookup-name') lookupByName();
+});
 
 function showView(v){
   if(S.view==='leaderboard'&&v!=='leaderboard'){
@@ -1142,6 +1154,13 @@ document.addEventListener('click',e=>{
   if(!chip) return;
   const{action}=chip.dataset;
 
+  if(action==='lookup-bracket'){ lookupByName(); return; }
+
+  if(action==='claim-pid'){
+    claimPid(chip.dataset.pid, chip.dataset.name, document.getElementById('lookup-result'));
+    return;
+  }
+
   if(action==='third-team'){
     const g=chip.dataset.group, team=chip.dataset.team;
     if(!team) return;
@@ -1365,6 +1384,41 @@ async function fetchLiveResults(){
     _liveRes=data; _liveResTS=now;
     return data;
   }catch(e){return null;}
+}
+
+// ═══════════════════════════════════════════════
+//  BRACKET LOOKUP (cross-device login)
+// ═══════════════════════════════════════════════
+async function lookupByName(){
+  const input=document.getElementById('lookup-name');
+  const name=(input?.value||'').trim();
+  const resEl=document.getElementById('lookup-result');
+  if(!name){resEl.innerHTML=`<div class="alert alert-warn">Please enter your name.</div>`;return;}
+  resEl.innerHTML=`<div class="loading" style="justify-content:flex-start;gap:.5rem"><div class="spinner" style="width:18px;height:18px"></div>Searching…</div>`;
+  try{
+    const{data=[],error}=await db.from('brackets').select('pid,data').ilike('data->>name',name);
+    if(error) throw error;
+    if(!data.length){
+      resEl.innerHTML=`<div class="alert alert-warn">No bracket found for "<strong>${esc(name)}</strong>". Check the spelling and try again.</div>`;
+      return;
+    }
+    if(data.length===1){
+      claimPid(data[0].pid,data[0].data?.name||name,resEl);
+      return;
+    }
+    // Multiple matches — let them pick
+    resEl.innerHTML=`<div style="margin-bottom:.5rem;font-size:.85rem;color:var(--muted)">Multiple entries found — select yours:</div>`+
+      data.map(r=>`<button class="btn btn-secondary" style="margin:.25rem .25rem 0 0" data-action="claim-pid" data-pid="${esc(r.pid)}" data-name="${esc(r.data?.name||'?')}">${esc(r.data?.name||'?')}</button>`).join('');
+  }catch(err){
+    resEl.innerHTML=`<div class="alert alert-err">Error: ${esc(err.message)}</div>`;
+  }
+}
+
+function claimPid(pid,name,resEl){
+  localStorage.setItem('wcPid',pid);
+  S.pid=pid;
+  if(resEl) resEl.innerHTML=`<div class="alert alert-info">✅ Found <strong>${esc(name)}</strong>! Taking you to the leaderboard…</div>`;
+  setTimeout(()=>showView('leaderboard'),900);
 }
 
 // ═══════════════════════════════════════════════
