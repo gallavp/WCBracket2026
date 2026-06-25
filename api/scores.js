@@ -45,7 +45,7 @@ module.exports = async function handler(req, res) {
   try {
     const [mRes, scRes] = await Promise.all([
       fetch(`${BASE}/matches`,          { headers }),
-      fetch(`${BASE}/scorers?limit=50`, { headers }).catch(() => null),
+      fetch(`${BASE}/scorers?limit=100`, { headers }).catch(() => null),
     ]);
 
     if (!mRes.ok) return res.status(502).json({ error: `Matches API error ${mRes.status}` });
