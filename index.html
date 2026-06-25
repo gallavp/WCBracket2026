@@ -418,7 +418,7 @@ const GK = Object.keys(GROUPS);
 const ALL_TEAMS = GK.flatMap(g=>GROUPS[g]).sort();
 const SCORERS = ["Kylian Mbappé","Erling Haaland","Lionel Messi","Cristiano Ronaldo",
   "Vinicius Jr.","Harry Kane","Bukayo Saka","Phil Foden","Lautaro Martínez",
-  "Pedri","Gavi","Rodri","Kai Havertz","Romelu Lukaku","Jonathan David",
+  "Lamine Yamal","Pedri","Gavi","Rodri","Kai Havertz","Romelu Lukaku","Jonathan David",
   "Richarlison","Alphonso Davies","Hirving Lozano","Raúl Jiménez","Memphis Depay"];
 
 // ═══════════════════════════════════════════════
@@ -1947,6 +1947,8 @@ const SCORER_DATA = {
   "Hirving Lozano":    {team:"Mexico",        code:"mx",     wiki:"Hirving_Lozano"},
   "Raúl Jiménez":      {team:"Mexico",        code:"mx",     wiki:"Raúl_Jiménez"},
   "Memphis Depay":     {team:"Netherlands",   code:"nl",     wiki:"Memphis_Depay"},
+  "Lamine Yamal":      {team:"Spain",         code:"es",     wiki:"Lamine_Yamal",           apiNames:["Lamine Yamal","L. Yamal"]},
+  "Lamine Yamal (Spain)":{team:"Spain",       code:"es",     wiki:"Lamine_Yamal",           apiNames:["Lamine Yamal","L. Yamal"]},
 };
 
 function _gbNormName(s){
