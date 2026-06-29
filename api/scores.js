@@ -145,18 +145,45 @@ module.exports = async function handler(req, res) {
       venue:     m.venue || null,
     }));
 
+    // Collect distinct non-group stages seen (for debugging name mismatches)
+    const stagesSeen = [...new Set(
+      (md.matches || []).filter(m => m.stage !== 'GROUP_STAGE').map(m => m.stage)
+    )];
+    result.debugStages = stagesSeen;
+
     for (const m of (md.matches || [])) {
       if (m.stage === 'GROUP_STAGE' || m.status !== 'FINISHED') continue;
       const winner = getWinner(m);
       if (!winner) continue;
       const wn = normName(winner);
       switch (m.stage) {
-        case 'ROUND_OF_32':    result.r32.push(wn); break;
-        case 'ROUND_OF_16':    result.r16.push(wn); break;
-        case 'QUARTER_FINALS': result.qf.push(wn);  break;
-        case 'SEMI_FINALS':    result.sf.push(wn);  break;
-        case 'FINAL':          result.champion = wn; break;
-        case 'THIRD_PLACE':    result.thirdPlaceWinner = wn; break;
+        // Round of 32 — various API name forms
+        case 'ROUND_OF_32':
+        case 'LAST_32':
+        case 'PLAYOFF_ROUND_OF_32':
+          result.r32.push(wn); break;
+        // Round of 16
+        case 'ROUND_OF_16':
+        case 'LAST_16':
+          result.r16.push(wn); break;
+        // Quarterfinals
+        case 'QUARTER_FINALS':
+        case 'QUARTERFINALS':
+        case 'LAST_8':
+          result.qf.push(wn); break;
+        // Semifinals
+        case 'SEMI_FINALS':
+        case 'SEMIFINALS':
+        case 'LAST_4':
+          result.sf.push(wn); break;
+        // Final
+        case 'FINAL':
+          result.champion = wn; break;
+        // 3rd place
+        case 'THIRD_PLACE':
+        case 'THIRD_PLACE_MATCH':
+        case 'PLAY_OFF_FOR_THIRD_PLACE':
+          result.thirdPlaceWinner = wn; break;
       }
     }
 
